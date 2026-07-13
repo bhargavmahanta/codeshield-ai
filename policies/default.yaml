@@ -1,0 +1,72 @@
+# This user-editable example mirrors the engine's packaged default policy.
+schema_version: 1
+name: codeshield-default-example
+scoring:
+  sensitivity:
+    PRIVATE_KEY: 35
+    PASSWORD: 35
+    API_KEY: 35
+    AUTH_TOKEN: 35
+    JWT: 35
+    DATABASE_CONNECTION_STRING: 35
+    CLOUD_CREDENTIAL: 35
+    SESSION_ID: 30
+    FINANCIAL_IDENTIFIER: 28
+    UNKNOWN_SECRET: 24
+    EMAIL: 15
+    PHONE_NUMBER: 15
+    PERSON: 15
+    LOCATION: 12
+    IP_ADDRESS: 10
+  destination:
+    local_file: 2
+    private_git: 10
+    public_git: 25
+    application_log: 20
+    internal_llm: 8
+    external_llm: 25
+    api_request: 20
+    cloud_storage: 20
+  context:
+    probable_real_secret: 15
+    placeholder: 0
+    test_data: 2
+    public_information: 3
+    personal_data: 10
+    confidential_business_data: 14
+    uncertain: 8
+  confidence_max: 20
+  repository_public: 5
+  policy_importance: 5
+rules:
+  - rule_id: block-public-git-credentials
+    destinations: [public_git]
+    data_categories: [PRIVATE_KEY, PASSWORD, API_KEY, AUTH_TOKEN, JWT, DATABASE_CONNECTION_STRING, CLOUD_CREDENTIAL, SESSION_ID]
+    minimum_confidence: 0.75
+    action: block
+    priority: 100
+    mandatory: true
+    rationale: Credentials must not be published to a public repository.
+  - rule_id: protect-external-personal-data
+    destinations: [external_llm, api_request, cloud_storage]
+    data_categories: [EMAIL, PHONE_NUMBER, PERSON, LOCATION, FINANCIAL_IDENTIFIER]
+    contexts: [personal_data]
+    action: pseudonymize
+    priority: 80
+    mandatory: true
+    rationale: Personal data must be protected before leaving the local device.
+  - rule_id: mask-application-logs
+    destinations: [application_log]
+    data_categories: [PASSWORD, API_KEY, AUTH_TOKEN, JWT, PRIVATE_KEY, DATABASE_CONNECTION_STRING, CLOUD_CREDENTIAL, SESSION_ID, UNKNOWN_SECRET]
+    action: mask
+    priority: 70
+    mandatory: true
+    rationale: Secret-like values must be masked before logging.
+  - rule_id: warn-placeholder-credentials
+    destinations: [private_git, internal_llm]
+    data_categories: [PASSWORD, API_KEY, AUTH_TOKEN, JWT, UNKNOWN_SECRET]
+    contexts: [placeholder, test_data]
+    action: warn
+    priority: 40
+    mandatory: false
+    rationale: Placeholder and test credentials still require review.
