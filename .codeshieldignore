@@ -1,0 +1,4 @@
+# Generated dependency and API contract artifacts contain expected hashes/identifiers.
+package-lock.json
+packages/shared/openapi.json
+packages/shared/src/generated.ts
