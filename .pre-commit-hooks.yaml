@@ -1,0 +1,6 @@
+- id: codeshield-check-staged
+  name: CodeShield staged security scan
+  entry: codeshield check-staged
+  language: system
+  pass_filenames: false
+  stages: [pre-commit]

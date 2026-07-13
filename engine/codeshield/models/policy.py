@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from datetime import date
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from codeshield.models.enums import (
     ContextLabel,
@@ -62,6 +64,45 @@ class PolicyRule(BaseModel):
         )
 
 
+class PolicyException(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    exception_id: str = Field(min_length=1, pattern=r"^[a-z0-9][a-z0-9_-]*$")
+    paths: list[str] = Field(min_length=1)
+    destinations: list[Destination] = Field(min_length=1)
+    data_categories: list[DataCategory] = Field(min_length=1)
+    contexts: list[ContextLabel] = Field(min_length=1)
+    expires_on: date
+    rationale: str = Field(min_length=1)
+
+    @field_validator("contexts")
+    @classmethod
+    def contexts_must_be_nonproduction(
+        cls, value: list[ContextLabel]
+    ) -> list[ContextLabel]:
+        allowed = {ContextLabel.PLACEHOLDER, ContextLabel.TEST_DATA}
+        if not set(value) <= allowed:
+            raise ValueError("exceptions are limited to placeholder or test_data")
+        return value
+
+    @field_validator("data_categories")
+    @classmethod
+    def categories_must_not_include_unexceptionable_secrets(
+        cls, value: list[DataCategory]
+    ) -> list[DataCategory]:
+        prohibited = {DataCategory.PRIVATE_KEY, DataCategory.CLOUD_CREDENTIAL}
+        if set(value) & prohibited:
+            raise ValueError("private keys and cloud credentials cannot be excepted")
+        return value
+
+    @field_validator("paths")
+    @classmethod
+    def paths_must_be_scoped(cls, value: list[str]) -> list[str]:
+        if any(not item.strip() or item.strip() in {"*", "**", "**/*"} for item in value):
+            raise ValueError("exception paths must be scoped globs")
+        return [item.replace("\\", "/") for item in value]
+
+
 class PolicyDocument(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -69,6 +110,7 @@ class PolicyDocument(BaseModel):
     name: str = Field(min_length=1)
     scoring: ScoringWeights
     rules: list[PolicyRule] = Field(default_factory=list)
+    exceptions: list[PolicyException] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def reject_duplicate_and_conflicting_rules(self) -> "PolicyDocument":
@@ -89,6 +131,13 @@ class PolicyDocument(BaseModel):
             if previous is not None and previous != rule.action:
                 raise ValueError("conflicting policy rules have identical selectors")
             selectors[selector] = rule.action
+        exception_ids: set[str] = set()
+        for exception in self.exceptions:
+            if exception.exception_id in exception_ids:
+                raise ValueError(
+                    f"duplicate policy exception ID: {exception.exception_id}"
+                )
+            exception_ids.add(exception.exception_id)
         return self
 
 
@@ -100,3 +149,5 @@ class PolicyDecision(BaseModel):
     mandatory: bool = False
     rationale: str = "No explicit policy rule matched."
     priority: int = 0
+    exception_id: str | None = None
+    exception_expires_on: date | None = None

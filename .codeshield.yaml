@@ -1,0 +1,3 @@
+schema_version: 1
+repository_visibility: private
+policy_file: policies/default.yaml

@@ -59,6 +59,20 @@ class RestoreTextRequest(BaseModel):
     session_id: str = Field(default="default", min_length=1, max_length=128)
 
 
+class HealthResponse(BaseModel):
+    status: str
+    service: str
+    local_only: bool
+
+
+class VersionResponse(BaseModel):
+    version: str
+
+
+class RestoreTextResponse(BaseModel):
+    restored_text: str
+
+
 @app.exception_handler(RequestValidationError)
 async def safe_validation_error(
     request: Request, exc: RequestValidationError
@@ -82,18 +96,18 @@ async def enforce_request_size(request: Request, call_next):  # type: ignore[no-
     return await call_next(request)
 
 
-@app.get("/health")
-def health() -> dict[str, object]:
-    return {
+@app.get("/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse.model_validate({
         "status": "ok",
         "service": "codeshield-engine",
         "local_only": True,
-    }
+    })
 
 
-@app.get("/version")
-def version() -> dict[str, str]:
-    return {"version": __version__}
+@app.get("/version", response_model=VersionResponse)
+def version() -> VersionResponse:
+    return VersionResponse(version=__version__)
 
 
 @app.post("/scan/text", response_model=list[Finding])
@@ -120,10 +134,10 @@ def protect_text(payload: ProtectTextRequest) -> ProtectionResult:
     return result
 
 
-@app.post("/restore")
-def restore_text(payload: RestoreTextRequest) -> dict[str, str]:
-    return {
-        "restored_text": SESSION_VAULT.restore_text(
+@app.post("/restore", response_model=RestoreTextResponse)
+def restore_text(payload: RestoreTextRequest) -> RestoreTextResponse:
+    return RestoreTextResponse(
+        restored_text=SESSION_VAULT.restore_text(
             payload.text, session_id=payload.session_id
         )
-    }
+    )

@@ -1,0 +1,784 @@
+{
+  "components": {
+    "schemas": {
+      "AppliedReplacement": {
+        "properties": {
+          "data_category": {
+            "$ref": "#/components/schemas/DataCategory"
+          },
+          "end": {
+            "exclusiveMinimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "finding_id": {
+            "title": "Finding Id",
+            "type": "string"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/ProtectionMode"
+          },
+          "replacement": {
+            "minLength": 1,
+            "title": "Replacement",
+            "type": "string"
+          },
+          "start": {
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "finding_id",
+          "data_category",
+          "start",
+          "end",
+          "replacement",
+          "mode"
+        ],
+        "title": "AppliedReplacement",
+        "type": "object"
+      },
+      "ContextAssessment": {
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "explanation": {
+            "minLength": 1,
+            "title": "Explanation",
+            "type": "string"
+          },
+          "label": {
+            "$ref": "#/components/schemas/ContextLabel"
+          },
+          "signals": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Signals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "label",
+          "confidence",
+          "explanation"
+        ],
+        "title": "ContextAssessment",
+        "type": "object"
+      },
+      "ContextLabel": {
+        "enum": [
+          "probable_real_secret",
+          "placeholder",
+          "test_data",
+          "public_information",
+          "personal_data",
+          "confidential_business_data",
+          "uncertain"
+        ],
+        "title": "ContextLabel",
+        "type": "string"
+      },
+      "DataCategory": {
+        "enum": [
+          "EMAIL",
+          "PHONE_NUMBER",
+          "IP_ADDRESS",
+          "PERSON",
+          "LOCATION",
+          "PASSWORD",
+          "API_KEY",
+          "AUTH_TOKEN",
+          "JWT",
+          "PRIVATE_KEY",
+          "DATABASE_CONNECTION_STRING",
+          "CLOUD_CREDENTIAL",
+          "SESSION_ID",
+          "FINANCIAL_IDENTIFIER",
+          "UNKNOWN_SECRET"
+        ],
+        "title": "DataCategory",
+        "type": "string"
+      },
+      "Destination": {
+        "enum": [
+          "local_file",
+          "private_git",
+          "public_git",
+          "application_log",
+          "internal_llm",
+          "external_llm",
+          "api_request",
+          "cloud_storage"
+        ],
+        "title": "Destination",
+        "type": "string"
+      },
+      "DetectionSource": {
+        "enum": [
+          "regex",
+          "entropy"
+        ],
+        "title": "DetectionSource",
+        "type": "string"
+      },
+      "Finding": {
+        "description": "A masked sensitive-data finding.\n\nRaw values are intentionally not part of this model. Detectors may use raw\nvalues only transiently while computing the finding ID and masked preview.",
+        "properties": {
+          "column": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "confidence_score": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence Score",
+            "type": "number"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContextAssessment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "data_category": {
+            "$ref": "#/components/schemas/DataCategory"
+          },
+          "detection_source": {
+            "$ref": "#/components/schemas/DetectionSource"
+          },
+          "end": {
+            "minimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "explanation": {
+            "minLength": 1,
+            "title": "Explanation",
+            "type": "string"
+          },
+          "file_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Path"
+          },
+          "finding_id": {
+            "title": "Finding Id",
+            "type": "string"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "masked_preview": {
+            "minLength": 1,
+            "title": "Masked Preview",
+            "type": "string"
+          },
+          "policy_decision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PolicyDecision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recommended_action": {
+            "$ref": "#/components/schemas/RecommendedAction"
+          },
+          "risk": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RiskScore"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "start": {
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "finding_id",
+          "data_category",
+          "start",
+          "end",
+          "masked_preview",
+          "detection_source",
+          "confidence_score",
+          "severity",
+          "explanation",
+          "recommended_action"
+        ],
+        "title": "Finding",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "local_only": {
+            "title": "Local Only",
+            "type": "boolean"
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "service",
+          "local_only"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "PolicyDecision": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/RecommendedAction",
+            "default": "allow"
+          },
+          "exception_expires_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exception Expires On"
+          },
+          "exception_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exception Id"
+          },
+          "mandatory": {
+            "default": false,
+            "title": "Mandatory",
+            "type": "boolean"
+          },
+          "matched_rule_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Rule Id"
+          },
+          "priority": {
+            "default": 0,
+            "title": "Priority",
+            "type": "integer"
+          },
+          "rationale": {
+            "default": "No explicit policy rule matched.",
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "title": "PolicyDecision",
+        "type": "object"
+      },
+      "ProtectTextRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "destination": {
+            "$ref": "#/components/schemas/Destination",
+            "default": "local_file"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/ProtectionMode",
+            "default": "type_placeholder"
+          },
+          "session_id": {
+            "default": "default",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 1000000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ProtectTextRequest",
+        "type": "object"
+      },
+      "ProtectionMode": {
+        "enum": [
+          "redact",
+          "partial_mask",
+          "type_placeholder",
+          "pseudonymize"
+        ],
+        "title": "ProtectionMode",
+        "type": "string"
+      },
+      "ProtectionResult": {
+        "properties": {
+          "blocked": {
+            "default": false,
+            "title": "Blocked",
+            "type": "boolean"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "protected_text": {
+            "title": "Protected Text",
+            "type": "string"
+          },
+          "replacements": {
+            "items": {
+              "$ref": "#/components/schemas/AppliedReplacement"
+            },
+            "title": "Replacements",
+            "type": "array"
+          }
+        },
+        "required": [
+          "protected_text"
+        ],
+        "title": "ProtectionResult",
+        "type": "object"
+      },
+      "RecommendedAction": {
+        "enum": [
+          "allow",
+          "warn",
+          "mask",
+          "pseudonymize",
+          "block"
+        ],
+        "title": "RecommendedAction",
+        "type": "string"
+      },
+      "RestoreTextRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "default": "default",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 1000000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "RestoreTextRequest",
+        "type": "object"
+      },
+      "RestoreTextResponse": {
+        "properties": {
+          "restored_text": {
+            "title": "Restored Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "restored_text"
+        ],
+        "title": "RestoreTextResponse",
+        "type": "object"
+      },
+      "RiskFactor": {
+        "properties": {
+          "contribution": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Contribution",
+            "type": "integer"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "weight": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Weight",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "value",
+          "weight",
+          "contribution",
+          "explanation"
+        ],
+        "title": "RiskFactor",
+        "type": "object"
+      },
+      "RiskScore": {
+        "properties": {
+          "factors": {
+            "items": {
+              "$ref": "#/components/schemas/RiskFactor"
+            },
+            "title": "Factors",
+            "type": "array"
+          },
+          "recommended_action": {
+            "$ref": "#/components/schemas/RecommendedAction"
+          },
+          "score": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "integer"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          }
+        },
+        "required": [
+          "score",
+          "severity",
+          "recommended_action",
+          "factors"
+        ],
+        "title": "RiskScore",
+        "type": "object"
+      },
+      "ScanTextRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "destination": {
+            "$ref": "#/components/schemas/Destination",
+            "default": "local_file"
+          },
+          "text": {
+            "maxLength": 1000000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ScanTextRequest",
+        "type": "object"
+      },
+      "Severity": {
+        "enum": [
+          "low",
+          "medium",
+          "high",
+          "critical"
+        ],
+        "title": "Severity",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VersionResponse": {
+        "properties": {
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "title": "VersionResponse",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Local-only API. Raw sensitive values are never logged.",
+    "title": "CodeShield AI Local Engine",
+    "version": "0.3.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/protect": {
+      "post": {
+        "operationId": "protect_text_protect_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtectTextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Protect Text"
+      }
+    },
+    "/restore": {
+      "post": {
+        "operationId": "restore_text_restore_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreTextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreTextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Restore Text"
+      }
+    },
+    "/scan/text": {
+      "post": {
+        "operationId": "scan_text_scan_text_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanTextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Finding"
+                  },
+                  "title": "Response Scan Text Scan Text Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scan Text"
+      }
+    },
+    "/version": {
+      "get": {
+        "operationId": "version_version_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Version"
+      }
+    }
+  }
+}

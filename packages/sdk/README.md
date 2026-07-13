@@ -1,4 +1,3 @@
-# TypeScript SDK
+# @codeshield-ai/sdk
 
-Placeholder for the Phase 3 TypeScript SDK.
-
+Typed loopback client for the local CodeShield FastAPI engine.

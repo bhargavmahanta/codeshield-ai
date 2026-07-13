@@ -1,4 +1,3 @@
-# Shared TypeScript Package
+# @codeshield-ai/shared
 
-Placeholder for shared TypeScript types and utilities.
-
+Committed OpenAPI schema and generated TypeScript contract types for engine 0.3.0.

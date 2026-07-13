@@ -1,6 +1,11 @@
 """Shared Pydantic models for the CodeShield engine."""
 
 from codeshield.models.context import ContextAssessment, FileContext
+from codeshield.models.config import (
+    RepositoryConfig,
+    RepositoryConfigError,
+    RepositoryVisibility,
+)
 from codeshield.models.enums import (
     ContextLabel,
     DataCategory,
@@ -14,6 +19,7 @@ from codeshield.models.finding import Finding
 from codeshield.models.policy import (
     PolicyDecision,
     PolicyDocument,
+    PolicyException,
     PolicyRule,
     ScoringWeights,
 )
@@ -32,10 +38,14 @@ __all__ = [
     "Finding",
     "PolicyDecision",
     "PolicyDocument",
+    "PolicyException",
     "PolicyRule",
     "ProtectionMode",
     "ProtectionResult",
     "RecommendedAction",
+    "RepositoryConfig",
+    "RepositoryConfigError",
+    "RepositoryVisibility",
     "RiskFactor",
     "RiskScore",
     "ScanResult",

@@ -3,6 +3,11 @@ __pycache__/
 *.pyo
 .pytest_cache/
 .pytest-tmp/
+.pytest-phase3-*/
+pytest-phase3-*/
+pytest-rootcheck*/
+pytest-py312-*/
+pytest-hook-*/
 .mypy_cache/
 .ruff_cache/
 .coverage
@@ -14,12 +19,14 @@ venv/
 env/
 
 node_modules/
+.npm-cache/
 dist/
 build/
 .eggs/
 *.egg-info/
 .next/
 coverage/
+*.tgz
 
 .env
 .env.*

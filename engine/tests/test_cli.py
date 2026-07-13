@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 from typer.testing import CliRunner
 
 from codeshield.cli import app
+from tests.git_helpers import git, initialize_repository, synthetic_api_key
 
 
 runner = CliRunner()
@@ -80,4 +82,75 @@ def test_cli_protect_writes_placeholder_output(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert output.read_text(encoding="utf-8") == "contact=<EMAIL>"
+    assert raw not in result.output
+
+
+def test_cli_staged_resolves_config_and_blocks_without_raw_output(
+    tmp_path: Path,
+) -> None:
+    repository = initialize_repository(tmp_path / "repo")
+    (repository / "policies").mkdir()
+    shutil.copy("codeshield/policies/default.yaml", repository / "policies/default.yaml")
+    (repository / ".codeshield.yaml").write_text(
+        "schema_version: 1\n"
+        "repository_visibility: public\n"
+        "policy_file: policies/default.yaml\n",
+        encoding="utf-8",
+    )
+    raw = synthetic_api_key()
+    (repository / "settings.py").write_text(
+        f"api_key = '{raw}'\n", encoding="utf-8"
+    )
+    git(repository, "add", ".")
+
+    result = runner.invoke(
+        app,
+        ["scan", "--staged", "--repository", str(repository), "--output", "json"],
+    )
+
+    assert result.exit_code == 2
+    assert raw not in result.output
+    assert json.loads(result.output)["destination"] == "public_git"
+
+
+def test_cli_staged_requires_destination_without_repository_config(
+    tmp_path: Path,
+) -> None:
+    repository = initialize_repository(tmp_path / "repo")
+    (repository / "safe.txt").write_text("safe\n", encoding="utf-8")
+    git(repository, "add", "safe.txt")
+
+    result = runner.invoke(app, ["scan", "--staged", "--repository", str(repository)])
+
+    assert result.exit_code == 3
+    assert "staged destination is required" in result.output
+
+
+def test_cli_rejects_path_and_staged_together(tmp_path: Path) -> None:
+    target = tmp_path / "safe.txt"
+    target.write_text("safe\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["scan", str(target), "--staged"])
+
+    assert result.exit_code == 3
+    assert "either FILE_OR_DIRECTORY or --staged" in result.output
+
+
+def test_check_staged_exception_warns_but_returns_success(tmp_path: Path) -> None:
+    repository = initialize_repository(tmp_path / "repo")
+    (repository / "policies").mkdir()
+    shutil.copy("codeshield/policies/default.yaml", repository / "policies/default.yaml")
+    shutil.copy("../.codeshield.yaml", repository / ".codeshield.yaml")
+    fixture = repository / "demo/review-fixtures"
+    fixture.mkdir(parents=True)
+    raw = synthetic_api_key()
+    (fixture / "key.txt").write_text(f"api_key = '{raw}'\n", encoding="utf-8")
+    git(repository, "add", ".")
+
+    result = runner.invoke(
+        app, ["check-staged", "--repository", str(repository)]
+    )
+
+    assert result.exit_code == 0
+    assert "exception=review-test-api-key" in result.output
     assert raw not in result.output

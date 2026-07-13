@@ -1,6 +1,6 @@
 # CodeShield AI
 
-CodeShield AI is a local-first sensitive-data protection framework for developer workflows. Engine 0.2.0 provides sensitive-data detection, context classification, destination-aware YAML policies, explainable risk scoring, protected output, and encrypted local pseudonymization.
+CodeShield AI is a local-first sensitive-data protection framework for developer workflows. Engine 0.3.0 adds staged Git protection, controlled policy exceptions, a local npm CLI, and a typed loopback SDK to the Phase 2 security engine.
 
 The scanner is intentionally local. It never returns complete raw secrets in CLI output or API responses; findings include masked previews only.
 
@@ -26,6 +26,15 @@ The scanner is intentionally local. It never returns complete raw secrets in CLI
 - Local `/scan/text`, `/protect`, and `/restore` API endpoints.
 - Synthetic classifier evaluation command and expanded security tests.
 
+## Phase 3 Features
+
+- Zero-context staged Git scanning that considers only added lines.
+- Repository-relative finding locations, multiline grouping, exclusions, and binary skips.
+- Managed native pre-commit hook plus pre-commit framework metadata.
+- Expiring, path-scoped test-data exceptions with visible IDs and preserved risk.
+- Private npm workspaces for the Python CLI wrapper, generated API types, and SDK.
+- Python 3.12 and Node 22 CI with contract drift and changed-addition enforcement.
+
 ## Quick Start
 
 Install and test locally from the engine package:
@@ -35,6 +44,8 @@ cd engine
 python -m pip install -e ".[dev]"
 python -m pytest tests
 codeshield scan ../README.md
+codeshield scan --staged
+codeshield install-hook
 codeshield server
 ```
 
@@ -58,6 +69,8 @@ http://127.0.0.1:8765/health
 codeshield scan .
 codeshield scan . --destination public_git
 codeshield scan path/to/file.txt --output json
+codeshield check-staged
+codeshield hook-status
 codeshield policy validate policies/default.yaml
 codeshield protect input.txt --mode type_placeholder --output protected.txt
 codeshield evaluate-context
@@ -86,7 +99,7 @@ masked findings only
 ## Current Limitations
 
 - Presidio, spaCy, and Gitleaks/detect-secrets adapters are not yet integrated.
-- npm, VS Code, Supabase, dashboard, Git hooks, and LLM proxy work remain later phases.
+- npm packages are local/private; VS Code, Supabase, dashboard, and LLM proxy work remain later phases.
 - The context model uses a small synthetic baseline dataset and requires broader evaluation before production use.
 - Detection relies on regex and entropy heuristics, so false positives and false negatives are expected.
 
@@ -95,11 +108,12 @@ Detailed documentation:
 - [Phase 1 implementation and testing guide](docs/phase-1-testing.md)
 - [Phase 2 implementation plan](docs/phase-2-plan.md)
 - [Phase 2 usage and security guide](docs/phase-2-guide.md)
+- [Phase 3 review and five-minute demo](docs/phase-3-review.md)
 
 ## Roadmap
 
 1. Completed: context classification, YAML policies, explainable destination-aware controls, masking, and encrypted pseudonymization.
-2. Add Git staged-diff scanning plus npm CLI and TypeScript SDK.
+2. Completed: Git staged-diff scanning, hooks, controlled exceptions, npm CLI, and TypeScript SDK.
 3. Add the VS Code extension.
 4. Add hosted management API, Supabase schema, and dashboard.
 5. Add the mock LLM proxy, logging sanitizer, CI/CD, deployment docs, and full evaluation pipeline.

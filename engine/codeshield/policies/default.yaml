@@ -38,6 +38,15 @@ scoring:
   repository_public: 5
   policy_importance: 5
 rules:
+  - rule_id: block-private-git-real-credentials
+    destinations: [private_git]
+    data_categories: [PRIVATE_KEY, PASSWORD, API_KEY, AUTH_TOKEN, JWT, DATABASE_CONNECTION_STRING, CLOUD_CREDENTIAL, SESSION_ID]
+    contexts: [probable_real_secret]
+    minimum_confidence: 0.75
+    action: block
+    priority: 90
+    mandatory: true
+    rationale: Probable real credentials must not be committed, including to private repositories.
   - rule_id: block-public-git-credentials
     destinations: [public_git]
     data_categories:
@@ -86,3 +95,11 @@ rules:
     priority: 40
     mandatory: false
     rationale: Placeholder and test credentials still require review.
+exceptions:
+  - exception_id: review-test-api-key
+    paths: ["demo/review-fixtures/**"]
+    destinations: [private_git, public_git]
+    data_categories: [API_KEY]
+    contexts: [placeholder, test_data]
+    expires_on: 2026-08-31
+    rationale: Review-only synthetic API key fixture approved until the review ends.
