@@ -1,0 +1,79 @@
+name: CodeShield CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, phase-3-review]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engine/pyproject.toml
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Python engine
+        run: python -m pip install -e "./engine[dev]"
+
+      - name: Python tests
+        run: python -m pytest engine/tests
+
+      - name: Secret-free fixture check
+        run: python engine/scripts/check_test_fixtures.py
+
+      - name: Install npm workspaces
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npm run typecheck
+
+      - name: TypeScript build
+        run: npm run build
+
+      - name: Vitest
+        run: npm test
+
+      - name: Generated contract drift
+        run: npm run check:contracts
+
+      - name: Package contents
+        run: npm run pack:check
+
+      - name: Live SDK contract smoke test
+        shell: bash
+        run: |
+          codeshield server --host 127.0.0.1 --port 8765 > /tmp/codeshield.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for attempt in {1..20}; do
+            curl --fail --silent http://127.0.0.1:8765/health >/dev/null && break
+            sleep 0.5
+          done
+          node packages/sdk/dist/demo.js
+
+      - name: Reconstruct and scan changed additions
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          export GIT_INDEX_FILE="$RUNNER_TEMP/codeshield-index"
+          git read-tree "$BASE_SHA"
+          git add -A
+          codeshield check-staged --destination private_git

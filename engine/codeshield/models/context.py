@@ -23,13 +23,16 @@ class FileContext(BaseModel):
         if path is None:
             return cls()
         lowered_parts = {part.lower() for part in path.parts}
+        fixture_path = any(
+            part in {"fixture", "fixtures", "examples", "samples"}
+            or part.endswith(("-fixture", "-fixtures", "_fixture", "_fixtures"))
+            for part in lowered_parts
+        )
         return cls(
             path=str(path),
             suffix=path.suffix.lower(),
             under_tests=bool(lowered_parts & {"test", "tests"}),
-            under_fixtures=bool(
-                lowered_parts & {"fixture", "fixtures", "examples", "samples"}
-            ),
+            under_fixtures=fixture_path,
         )
 
 

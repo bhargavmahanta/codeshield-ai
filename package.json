@@ -1,0 +1,22 @@
+{
+  "name": "codeshield-ai",
+  "version": "0.3.0",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "npm run build --workspace @codeshield-ai/shared && npm run build --workspace @codeshield-ai/cli && npm run build --workspace @codeshield-ai/sdk",
+    "typecheck": "npm run build --workspace @codeshield-ai/shared && npm run typecheck --workspace @codeshield-ai/cli && npm run typecheck --workspace @codeshield-ai/sdk",
+    "test": "npm run test --workspace @codeshield-ai/cli && npm run test --workspace @codeshield-ai/sdk",
+    "generate:contracts": "node scripts/generate-contracts.mjs",
+    "check:contracts": "npm run generate:contracts && git diff --exit-code -- packages/shared/openapi.json packages/shared/src/generated.ts",
+    "pack:check": "npm pack --dry-run --cache .npm-cache --workspace @codeshield-ai/cli && npm pack --dry-run --cache .npm-cache --workspace @codeshield-ai/sdk && npm pack --dry-run --cache .npm-cache --workspace @codeshield-ai/shared",
+    "demo:sdk": "npm run build && node packages/sdk/dist/demo.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "openapi-typescript": "^7.9.1",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0"
+  }
+}

@@ -72,7 +72,10 @@ class CodeShieldScanner:
             assessment = self.context_classifier.classify(text, finding, context)
             finding = finding.with_context(assessment)
             decision = self.policy_engine.evaluate(
-                finding, destination, assessment
+                finding,
+                destination,
+                assessment,
+                file_path=context.path,
             )
             finding = finding.with_policy_decision(decision)
             risk = self.risk_scorer.score(

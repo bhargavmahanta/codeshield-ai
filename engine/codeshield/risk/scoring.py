@@ -64,7 +64,11 @@ class RiskScorer:
             + policy_importance,
         )
         severity, risk_action = severity_and_action(score)
-        action = _stricter_action(risk_action, decision.action)
+        action = (
+            RecommendedAction.WARN
+            if decision.exception_id is not None
+            else _stricter_action(risk_action, decision.action)
+        )
 
         return RiskScore(
             score=score,

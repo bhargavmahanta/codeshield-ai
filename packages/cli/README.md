@@ -1,4 +1,3 @@
-# npm CLI
+# @codeshield-ai/cli
 
-Placeholder for the Phase 3 `@codeshield-ai/cli` package.
-
+Private review package that forwards arguments to the local Python CodeShield CLI.
