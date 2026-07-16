@@ -12,7 +12,16 @@ import yaml
 from pydantic import ValidationError
 
 from codeshield.models.context import ContextAssessment
-from codeshield.models.enums import Destination, RecommendedAction
+from codeshield.models.enums import (
+    AttestationStatus,
+    DataCategory,
+    Destination,
+    ProviderFeature,
+    RecommendedAction,
+    SegmentKind,
+    SensitivityLevel,
+    TransferDirection,
+)
 from codeshield.models.finding import Finding
 from codeshield.models.policy import (
     PolicyDecision,
@@ -109,6 +118,57 @@ class PolicyEngine:
         if not matches:
             return None
         return sorted(matches, key=lambda item: item.exception_id)[0]
+
+    def evaluate_llm(
+        self,
+        *,
+        sensitivity: SensitivityLevel,
+        categories: set[DataCategory],
+        provider_profile: str,
+        attestation_status: AttestationStatus,
+        segment_types: set[SegmentKind],
+        direction: TransferDirection,
+        capabilities: set[str],
+        requested_features: set[ProviderFeature],
+    ) -> PolicyDecision:
+        matches = [
+            rule
+            for rule in self.document.llm_rules
+            if sensitivity in rule.sensitivity_levels
+            and (
+                rule.data_categories is None
+                or bool(categories & set(rule.data_categories))
+            )
+            and (
+                rule.provider_profiles is None
+                or provider_profile in rule.provider_profiles
+            )
+            and (
+                rule.attestation_statuses is None
+                or attestation_status in rule.attestation_statuses
+            )
+            and (
+                rule.segment_types is None
+                or bool(segment_types & set(rule.segment_types))
+            )
+            and (rule.directions is None or direction in rule.directions)
+            and set(rule.required_capabilities) <= capabilities
+            and (
+                rule.requested_features is None
+                or bool(requested_features & set(rule.requested_features))
+            )
+        ]
+        if not matches:
+            return PolicyDecision()
+        matches.sort(key=lambda item: item.priority, reverse=True)
+        best = matches[0]
+        return PolicyDecision(
+            matched_rule_id=best.rule_id,
+            action=best.action,
+            mandatory=best.mandatory,
+            rationale=best.rationale,
+            priority=best.priority,
+        )
 
 
 def _decision_from_rules(matches: list[PolicyRule]) -> PolicyDecision:

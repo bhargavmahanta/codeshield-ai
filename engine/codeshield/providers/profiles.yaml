@@ -1,0 +1,378 @@
+- profile_id: openai-api-standard
+  version: "2026.07"
+  provider: OpenAI
+  product: OpenAI API
+  plan: Business API
+  surface: stateless API
+  processor: OpenAI
+  prohibits_training: true
+  maximum_retention_days: 30
+  data_residency: configurable for eligible projects
+  contractual_controls: [DPA, project data controls]
+  supported_features: [stateful_storage, file_upload, extended_cache, code_execution]
+  incompatible_confidential_features: [stateful_storage, file_upload, extended_cache, code_execution]
+  handling:
+    - {data_type: prompt, retained: true, retention_days: 30, used_for_training: false, human_review_possible: true, notes: Standard abuse-monitoring maximum.}
+    - {data_type: output, retained: true, retention_days: 30, used_for_training: false, human_review_possible: true, notes: Standard abuse-monitoring maximum.}
+  evidence_urls: [https://developers.openai.com/api/docs/guides/your-data]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: openai-api-zdr
+  version: "2026.07"
+  provider: OpenAI
+  product: OpenAI API
+  plan: approved Zero Data Retention
+  surface: eligible API endpoints
+  processor: OpenAI
+  prohibits_training: true
+  maximum_retention_days: 0
+  zero_data_retention: true
+  data_residency: configurable for eligible projects
+  contractual_controls: [DPA, approved ZDR]
+  supported_features: []
+  incompatible_confidential_features: [stateful_storage, file_upload, extended_cache, connectors, code_execution]
+  handling:
+    - {data_type: prompt, retained: false, retention_days: 0, used_for_training: false, human_review_possible: false, notes: Eligible endpoint under approved ZDR.}
+    - {data_type: output, retained: false, retention_days: 0, used_for_training: false, human_review_possible: false, notes: Eligible endpoint under approved ZDR.}
+  evidence_urls: [https://developers.openai.com/api/docs/guides/your-data]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: chatgpt-enterprise
+  version: "2026.07"
+  provider: OpenAI
+  product: ChatGPT Enterprise
+  plan: Enterprise
+  surface: managed chat workspace
+  processor: OpenAI
+  prohibits_training: true
+  maximum_retention_days: 30
+  data_residency: contract and workspace dependent
+  contractual_controls: [enterprise privacy terms, configurable retention]
+  supported_features: [stateful_storage, file_upload, connectors, code_execution]
+  inherent_features: [stateful_storage]
+  incompatible_confidential_features: [connectors, code_execution]
+  handling:
+    - {data_type: prompt, retained: true, retention_days: 30, used_for_training: false, human_review_possible: null, notes: Conservative configured-retention baseline; attest actual workspace controls.}
+  evidence_urls: [https://openai.com/business-data/]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: anthropic-api-commercial
+  version: "2026.07"
+  provider: Anthropic
+  product: Claude API
+  plan: Commercial
+  surface: Messages API
+  processor: Anthropic
+  prohibits_training: true
+  maximum_retention_days: 30
+  data_residency: contract dependent
+  contractual_controls: [Commercial Terms, DPA]
+  supported_features: [file_upload, code_execution]
+  incompatible_confidential_features: [file_upload, code_execution]
+  handling:
+    - {data_type: prompt, retained: true, retention_days: 30, used_for_training: false, human_review_possible: true, notes: Conservative covered-model maximum.}
+  evidence_urls: [https://platform.claude.com/docs/en/manage-claude/api-and-data-retention]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: anthropic-api-zdr
+  version: "2026.07"
+  provider: Anthropic
+  product: Claude API
+  plan: approved ZDR
+  surface: eligible Messages API features
+  processor: Anthropic
+  prohibits_training: true
+  maximum_retention_days: 0
+  zero_data_retention: true
+  data_residency: contract dependent
+  contractual_controls: [Commercial Terms, approved ZDR]
+  supported_features: []
+  incompatible_confidential_features: [file_upload, code_execution, connectors, stateful_storage]
+  handling:
+    - {data_type: prompt, retained: false, retention_days: 0, used_for_training: false, human_review_possible: false, notes: Eligible API feature under ZDR.}
+  evidence_urls: [https://platform.claude.com/docs/en/manage-claude/api-and-data-retention]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: claude-enterprise
+  version: "2026.07"
+  provider: Anthropic
+  product: Claude Enterprise
+  plan: Enterprise
+  surface: managed chat workspace
+  processor: Anthropic
+  prohibits_training: true
+  maximum_retention_days: 30
+  data_residency: organization configuration dependent
+  contractual_controls: [Commercial Terms, organization retention controls]
+  supported_features: [stateful_storage, file_upload, connectors]
+  inherent_features: [stateful_storage]
+  incompatible_confidential_features: [connectors]
+  handling:
+    - {data_type: application_state, retained: true, retention_days: 30, used_for_training: false, human_review_possible: null, notes: Workspace content follows organization retention settings and is not ZDR-eligible.}
+  evidence_urls: [https://platform.claude.com/docs/en/manage-claude/api-and-data-retention]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: claude-code-commercial
+  version: "2026.07"
+  provider: Anthropic
+  product: Claude Code
+  plan: Commercial API organization
+  surface: coding agent
+  processor: Anthropic
+  prohibits_training: true
+  maximum_retention_days: 30
+  data_residency: contract dependent
+  contractual_controls: [Commercial Terms]
+  supported_features: [code_execution, workspace_indexing]
+  inherent_features: [workspace_indexing]
+  incompatible_confidential_features: [code_execution]
+  handling:
+    - {data_type: code_workspace_context, retained: true, retention_days: 30, used_for_training: false, human_review_possible: true, notes: Workspace context follows commercial API controls.}
+  evidence_urls: [https://platform.claude.com/docs/en/manage-claude/api-and-data-retention]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: claude-code-zdr
+  version: "2026.07"
+  provider: Anthropic
+  product: Claude Code
+  plan: Commercial or Enterprise with ZDR
+  surface: coding agent
+  processor: Anthropic
+  prohibits_training: true
+  maximum_retention_days: 0
+  zero_data_retention: true
+  data_residency: contract dependent
+  contractual_controls: [approved ZDR, metrics logging disabled]
+  supported_features: [workspace_indexing]
+  inherent_features: [workspace_indexing]
+  incompatible_confidential_features: [code_execution]
+  handling:
+    - {data_type: code_workspace_context, retained: false, retention_days: 0, used_for_training: false, human_review_possible: false, notes: Requires eligible organization and disabled metrics logging.}
+  evidence_urls: [https://platform.claude.com/docs/en/manage-claude/api-and-data-retention]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: gemini-api-paid
+  version: "2026.07"
+  provider: Google
+  product: Gemini Developer API
+  plan: Paid
+  surface: API
+  processor: Google
+  prohibits_training: true
+  maximum_retention_days: 30
+  data_residency: service dependent
+  contractual_controls: [Paid Services terms, DPA]
+  supported_features: [stateful_storage, file_upload, grounding, extended_cache]
+  incompatible_confidential_features: [stateful_storage, file_upload, grounding, extended_cache]
+  handling:
+    - {data_type: prompt, retained: true, retention_days: 30, used_for_training: false, human_review_possible: true, notes: Conservative limited abuse and feature-retention maximum.}
+  evidence_urls: [https://ai.google.dev/gemini-api/docs/zdr]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: gemini-api-zdr
+  version: "2026.07"
+  provider: Google
+  product: Gemini Developer API
+  plan: approved ZDR project
+  surface: API without stateful features
+  processor: Google
+  prohibits_training: true
+  maximum_retention_days: 0
+  zero_data_retention: true
+  data_residency: service dependent
+  contractual_controls: [Paid Services terms, approved ZDR]
+  supported_features: []
+  incompatible_confidential_features: [stateful_storage, file_upload, grounding, extended_cache]
+  handling:
+    - {data_type: prompt, retained: false, retention_days: 0, used_for_training: false, human_review_possible: false, notes: Sanitized logging under approved ZDR.}
+  evidence_urls: [https://ai.google.dev/gemini-api/docs/zdr]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: gemini-api-grounding
+  version: "2026.07"
+  provider: Google
+  product: Gemini Developer API
+  plan: Paid
+  surface: Grounding with Google Search or Maps
+  processor: Google
+  prohibits_training: true
+  maximum_retention_days: 30
+  data_residency: service dependent
+  contractual_controls: [Paid Services terms, DPA]
+  supported_features: [grounding]
+  inherent_features: [grounding]
+  incompatible_confidential_features: [grounding]
+  handling:
+    - {data_type: prompt, retained: true, retention_days: 30, used_for_training: false, human_review_possible: null, notes: Grounding stores prompt context and output for 30 days.}
+  evidence_urls: [https://ai.google.dev/gemini-api/docs/zdr]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: gemini-interactions-stored
+  version: "2026.07"
+  provider: Google
+  product: Gemini Interactions API
+  plan: Paid
+  surface: stored multi-turn interactions
+  processor: Google
+  prohibits_training: true
+  maximum_retention_days: 30
+  data_residency: service dependent
+  contractual_controls: [Paid Services terms, DPA]
+  supported_features: [stateful_storage]
+  inherent_features: [stateful_storage]
+  incompatible_confidential_features: [stateful_storage]
+  handling:
+    - {data_type: application_state, retained: true, retention_days: 30, used_for_training: false, human_review_possible: null, notes: State storage is enabled for this profile.}
+  evidence_urls: [https://ai.google.dev/gemini-api/docs/zdr]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: vertex-ai-standard
+  version: "2026.07"
+  provider: Google Cloud
+  product: Vertex AI
+  plan: Enterprise
+  surface: online inference with standard abuse monitoring
+  processor: Google Cloud
+  prohibits_training: true
+  maximum_retention_days: 30
+  data_residency: configured cloud region
+  contractual_controls: [Cloud DPA]
+  supported_features: [grounding, stateful_storage, extended_cache, file_upload]
+  incompatible_confidential_features: [grounding, stateful_storage, extended_cache, file_upload]
+  handling:
+    - {data_type: prompt, retained: true, retention_days: 30, used_for_training: false, human_review_possible: true, notes: Conservative prompt-logging bound where abuse monitoring applies.}
+  evidence_urls: [https://docs.cloud.google.com/vertex-ai/generative-ai/docs/vertex-ai-zero-data-retention]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: vertex-ai-zdr
+  version: "2026.07"
+  provider: Google Cloud
+  product: Vertex AI
+  plan: Enterprise with ZDR controls
+  surface: online inference
+  processor: Google Cloud
+  prohibits_training: true
+  maximum_retention_days: 0
+  zero_data_retention: true
+  data_residency: configured cloud region
+  contractual_controls: [Cloud DPA, abuse-monitoring exception where required]
+  supported_features: []
+  incompatible_confidential_features: [grounding, stateful_storage, extended_cache, file_upload]
+  handling:
+    - {data_type: prompt, retained: false, retention_days: 0, used_for_training: false, human_review_possible: false, notes: ZDR configuration excludes retaining features.}
+  evidence_urls: [https://docs.cloud.google.com/vertex-ai/generative-ai/docs/vertex-ai-zero-data-retention]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: azure-foundry-stateless
+  version: "2026.07"
+  provider: Microsoft
+  product: Azure OpenAI / Foundry Models
+  plan: Enterprise
+  surface: stateless inference
+  processor: Microsoft
+  prohibits_training: true
+  maximum_retention_days: 30
+  data_residency: deployment geography dependent
+  contractual_controls: [Microsoft DPA, modified abuse monitoring where approved]
+  supported_features: []
+  incompatible_confidential_features: [stateful_storage, file_upload, connectors, extended_cache]
+  handling:
+    - {data_type: prompt, retained: true, retention_days: 30, used_for_training: false, human_review_possible: true, notes: Model is stateless; conservative abuse-monitoring maximum.}
+  evidence_urls: [https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/openai/data-privacy]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: bedrock-runtime
+  version: "2026.07"
+  provider: Amazon Web Services
+  product: Amazon Bedrock
+  plan: Enterprise cloud service
+  surface: model runtime
+  processor: AWS
+  prohibits_training: true
+  maximum_retention_days: 30
+  data_residency: selected AWS region
+  contractual_controls: [AWS DPA, IAM, PrivateLink]
+  supported_features: []
+  incompatible_confidential_features: [stateful_storage, connectors, file_upload]
+  handling:
+    - {data_type: prompt, retained: true, retention_days: 30, used_for_training: false, human_review_possible: null, notes: Conservative abuse-detection bound; model providers cannot access prompts.}
+  evidence_urls: [https://docs.aws.amazon.com/bedrock/latest/userguide/data-protection.html]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: copilot-business-ide
+  version: "2026.07"
+  provider: GitHub
+  product: GitHub Copilot
+  plan: Business
+  surface: IDE chat and completions
+  processor: GitHub and subprocessors
+  prohibits_training: true
+  maximum_retention_days: 0
+  data_residency: service dependent
+  contractual_controls: [GitHub DPA, organization policy controls]
+  supported_features: [workspace_indexing]
+  inherent_features: [workspace_indexing]
+  incompatible_confidential_features: []
+  handling:
+    - {data_type: code_workspace_context, retained: false, retention_days: 0, used_for_training: false, human_review_possible: null, notes: IDE prompts and suggestions are not retained by default.}
+  evidence_urls: [https://github.com/features/copilot]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: copilot-enterprise-ide
+  version: "2026.07"
+  provider: GitHub
+  product: GitHub Copilot
+  plan: Enterprise
+  surface: IDE chat and completions
+  processor: GitHub and subprocessors
+  prohibits_training: true
+  maximum_retention_days: 0
+  data_residency: service dependent
+  contractual_controls: [GitHub DPA, enterprise policy controls]
+  supported_features: [workspace_indexing]
+  inherent_features: [workspace_indexing]
+  incompatible_confidential_features: []
+  handling:
+    - {data_type: code_workspace_context, retained: false, retention_days: 0, used_for_training: false, human_review_possible: null, notes: IDE prompts and suggestions are not retained by default.}
+  evidence_urls: [https://github.com/features/copilot]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: copilot-business-cli
+  version: "2026.07"
+  provider: GitHub
+  product: GitHub Copilot
+  plan: Business
+  surface: CLI and GitHub.com
+  processor: GitHub and subprocessors
+  prohibits_training: true
+  maximum_retention_days: 28
+  data_residency: service dependent
+  contractual_controls: [GitHub DPA, organization policy controls]
+  supported_features: [stateful_storage, workspace_indexing]
+  inherent_features: [stateful_storage, workspace_indexing]
+  incompatible_confidential_features: [stateful_storage]
+  handling:
+    - {data_type: prompt, retained: true, retention_days: 28, used_for_training: false, human_review_possible: null, notes: Non-IDE prompts and suggestions may be retained for 28 days.}
+  evidence_urls: [https://github.com/features/copilot]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14
+- profile_id: consumer-ai-reference
+  version: "2026.07"
+  provider: Multiple
+  product: Consumer chat and individual coding plans
+  plan: Consumer
+  surface: web desktop mobile or individual IDE
+  processor: provider dependent
+  reference_only: true
+  prohibits_training: false
+  maximum_retention_days: null
+  data_residency: unknown or consumer terms
+  contractual_controls: []
+  supported_features: [stateful_storage, file_upload, grounding, connectors, code_execution, workspace_indexing]
+  inherent_features: [stateful_storage]
+  incompatible_confidential_features: [stateful_storage, file_upload, grounding, connectors, code_execution, workspace_indexing]
+  handling:
+    - {data_type: prompt, retained: true, retention_days: null, used_for_training: true, human_review_possible: true, notes: Reference-only conservative consumer profile.}
+  evidence_urls: [https://github.com/features/copilot, https://platform.claude.com/docs/en/manage-claude/api-and-data-retention, https://ai.google.dev/gemini-api/docs/zdr]
+  reviewed_on: 2026-07-16
+  review_due: 2026-10-14

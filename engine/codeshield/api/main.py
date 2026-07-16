@@ -12,7 +12,13 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from codeshield.models.enums import Destination, ProtectionMode
 from codeshield.models.finding import Finding
+from codeshield.models.llm import (
+    LlmAssessmentResult,
+    LlmPreflightRequest,
+    LlmProtectionResult,
+)
 from codeshield.models.protection import ProtectionResult
+from codeshield.llm import LlmPreflightService
 from codeshield.pseudonymization import InMemoryKeyProvider, PseudonymVault
 from codeshield.scanner import CodeShieldScanner
 from codeshield.version import __version__
@@ -141,3 +147,17 @@ def restore_text(payload: RestoreTextRequest) -> RestoreTextResponse:
             payload.text, session_id=payload.session_id
         )
     )
+
+
+@app.post("/llm/assess", response_model=LlmAssessmentResult)
+def assess_for_llm(payload: LlmPreflightRequest) -> LlmAssessmentResult:
+    """Assess structured content locally before an LLM trust-boundary crossing."""
+
+    return LlmPreflightService().assess(payload)
+
+
+@app.post("/llm/protect", response_model=LlmProtectionResult)
+def protect_for_llm(payload: LlmPreflightRequest) -> LlmProtectionResult:
+    """Protect eligible content locally; blocked requests return no content."""
+
+    return LlmPreflightService().protect(payload)

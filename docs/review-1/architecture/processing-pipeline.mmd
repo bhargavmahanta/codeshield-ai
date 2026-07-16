@@ -1,0 +1,43 @@
+flowchart TB
+    subgraph GITFLOW[Developer and Git flow - implemented]
+      A[File, directory, or staged additions] --> B[Validation, exclusions, size, binary, timeout]
+      B --> C[Regex and entropy detectors]
+      C --> D[Deduplication and overlap resolution]
+      D --> E[Context classification]
+      E --> F[Destination-aware YAML policy]
+      F --> G[Explainable 0-100 risk score]
+      G --> H{Effective action}
+      H -->|allow or warn| I[Continue]
+      H -->|mask or pseudonymize| J[Local transformation]
+      H -->|block| K[Stop commit or transfer]
+    end
+
+    subgraph LLMFLOW[Structured LLM preflight - implemented]
+      L[System, developer, user, retrieved, tool, and source segments] --> M[Category, provenance, and sensitivity classification]
+      M --> N[Provider profile and exact local attestation]
+      N --> O[Training, retention, feature, and expiry checks]
+      O --> P[LLM policy decision]
+      P --> Q{Transfer decision}
+      Q -->|eligible personal data| R[Local pseudonymization]
+      Q -->|approved| S[Protected content returned to caller]
+      Q -->|restricted, stale, unknown, or unsafe| T[Block - no content returned]
+      R --> S
+      P --> U[(Metadata-only HMAC audit)]
+      V[External LLM response - untrusted] --> W[Inbound assessment]
+      W -->|safe| X[Display, store, or approved tool use]
+      W -->|injection plus privileged tools| T
+    end
+
+    F -. shared policy concepts .-> P
+    J -. protected prompt/source .-> L
+
+    classDef process fill:#eff6ff,stroke:#2563eb,color:#172554,stroke-width:1.5px;
+    classDef decision fill:#fefce8,stroke:#ca8a04,color:#713f12,stroke-width:2px;
+    classDef safe fill:#ecfdf5,stroke:#16a34a,color:#14532d,stroke-width:2px;
+    classDef stop fill:#fff1f2,stroke:#dc2626,color:#7f1d1d,stroke-width:2px;
+    classDef data fill:#f8fafc,stroke:#64748b,color:#0f172a;
+    class A,B,C,D,E,F,G,L,M,N,O,P,R,W process;
+    class H,Q decision;
+    class I,J,S,X safe;
+    class K,T stop;
+    class U,V data;
