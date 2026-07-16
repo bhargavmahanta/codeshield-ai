@@ -8,6 +8,7 @@ pytest-phase3-*/
 pytest-rootcheck*/
 pytest-py312-*/
 pytest-hook-*/
+pytest-phase4-*/
 .mypy_cache/
 .ruff_cache/
 .coverage
@@ -34,7 +35,11 @@ coverage/
 
 *.log
 *.sqlite
+*.sqlite-wal
+*.sqlite-shm
 *.db
+.codeshield/provider-attestations.json
+.codeshield/audit.key
 
 .DS_Store
 Thumbs.db

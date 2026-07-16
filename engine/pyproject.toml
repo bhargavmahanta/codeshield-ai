@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codeshield-engine"
-version = "0.3.0"
+version = "0.4.0"
 description = "Local-first sensitive data scanner for developer workflows."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -34,6 +34,7 @@ include = ["codeshield*"]
 
 [tool.setuptools.package-data]
 "codeshield.policies" = ["*.yaml"]
+"codeshield.providers" = ["*.yaml"]
 
 [tool.pytest.ini_options]
 addopts = "-q --basetemp=.pytest-tmp -p no:cacheprovider"

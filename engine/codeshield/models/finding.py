@@ -11,6 +11,7 @@ from codeshield.models.enums import (
     DataCategory,
     DetectionSource,
     RecommendedAction,
+    SensitivityLevel,
     Severity,
 )
 from codeshield.models.context import ContextAssessment
@@ -37,6 +38,7 @@ class Finding(BaseModel):
     severity: Severity
     explanation: str = Field(min_length=1)
     recommended_action: RecommendedAction
+    sensitivity: SensitivityLevel = SensitivityLevel.INTERNAL
     file_path: str | None = None
     line: int | None = Field(default=None, ge=1)
     column: int | None = Field(default=None, ge=1)

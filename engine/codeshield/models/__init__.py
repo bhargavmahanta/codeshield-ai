@@ -11,9 +11,16 @@ from codeshield.models.enums import (
     DataCategory,
     Destination,
     DetectionSource,
+    AttestationStatus,
+    ProviderDataType,
+    ProviderFeature,
     ProtectionMode,
     RecommendedAction,
+    SegmentKind,
+    SegmentProvenance,
+    SensitivityLevel,
     Severity,
+    TransferDirection,
 )
 from codeshield.models.finding import Finding
 from codeshield.models.policy import (
@@ -21,7 +28,21 @@ from codeshield.models.policy import (
     PolicyDocument,
     PolicyException,
     PolicyRule,
+    LlmPolicyRule,
     ScoringWeights,
+)
+from codeshield.models.llm import (
+    ContentSegment,
+    LlmAssessmentResult,
+    LlmPreflightRequest,
+    LlmProtectionResult,
+    ProtectedSegment,
+    SegmentAssessment,
+)
+from codeshield.models.provider import (
+    ProviderAttestation,
+    ProviderHandlingFact,
+    ProviderProfile,
 )
 from codeshield.models.protection import AppliedReplacement, ProtectionResult
 from codeshield.models.risk import RiskFactor, RiskScore
@@ -29,6 +50,8 @@ from codeshield.models.scan import ScanResult, SkippedFile
 
 __all__ = [
     "AppliedReplacement",
+    "AttestationStatus",
+    "ContentSegment",
     "ContextAssessment",
     "ContextLabel",
     "DataCategory",
@@ -36,20 +59,35 @@ __all__ = [
     "DetectionSource",
     "FileContext",
     "Finding",
+    "LlmAssessmentResult",
+    "LlmPolicyRule",
+    "LlmPreflightRequest",
+    "LlmProtectionResult",
     "PolicyDecision",
     "PolicyDocument",
     "PolicyException",
     "PolicyRule",
     "ProtectionMode",
     "ProtectionResult",
+    "ProtectedSegment",
+    "ProviderAttestation",
+    "ProviderDataType",
+    "ProviderFeature",
+    "ProviderHandlingFact",
+    "ProviderProfile",
     "RecommendedAction",
     "RepositoryConfig",
     "RepositoryConfigError",
     "RepositoryVisibility",
     "RiskFactor",
     "RiskScore",
+    "SegmentAssessment",
+    "SegmentKind",
+    "SegmentProvenance",
+    "SensitivityLevel",
     "ScanResult",
     "ScoringWeights",
     "Severity",
     "SkippedFile",
+    "TransferDirection",
 ]

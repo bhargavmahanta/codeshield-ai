@@ -75,4 +75,78 @@ describe("CodeShieldClient", () => {
       "loopback",
     );
   });
+
+  it("sends typed LLM assessment and protection requests", async () => {
+    const assessment = {
+      highest_sensitivity: "public",
+      categories: [],
+      segments: [],
+      action: "allow",
+      safe_to_send: true,
+      reasons: ["approved"],
+      required_transformations: [],
+      provider_profile_id: "openai-api-zdr",
+      attestation_status: "valid",
+      audit_id: "audit-1",
+    };
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(assessment))
+      .mockResolvedValueOnce(
+        jsonResponse({ assessment, protected_segments: [] }),
+      );
+    const client = new CodeShieldClient({ fetch: fetchMock });
+    const payload = {
+      segments: [
+        {
+          segment_id: "one",
+          kind: "user" as const,
+          content: "public question",
+          provenance: "trusted" as const,
+        },
+      ],
+      provider_profile_id: "openai-api-zdr",
+      direction: "outbound" as const,
+      purpose: "SDK preflight test",
+      enabled_features: [],
+      privileged_tools: false,
+    };
+
+    await client.assessForLlm(payload);
+    await client.protectForLlm(payload);
+
+    expect(fetchMock.mock.calls[0]?.[0].toString()).toBe(
+      "http://127.0.0.1:8765/llm/assess",
+    );
+    expect(fetchMock.mock.calls[1]?.[0].toString()).toBe(
+      "http://127.0.0.1:8765/llm/protect",
+    );
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify(payload));
+  });
+
+  it("does not leak LLM segment content in API errors", async () => {
+    const privateValue = "confidential-source-fragment";
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({}, 403));
+    const client = new CodeShieldClient({ fetch: fetchMock });
+
+    const error = await client
+      .assessForLlm({
+        segments: [
+          {
+            segment_id: "one",
+            kind: "source_code",
+            content: privateValue,
+            provenance: "trusted",
+          },
+        ],
+        provider_profile_id: "unknown",
+        direction: "outbound",
+        purpose: "safe error test",
+        enabled_features: [],
+        privileged_tools: false,
+      })
+      .catch((value: unknown) => value);
+
+    expect(String(error)).not.toContain(privateValue);
+  });
 });

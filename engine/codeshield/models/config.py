@@ -32,6 +32,7 @@ class RepositoryConfig(BaseModel):
     schema_version: int = Field(default=1, ge=1, le=1)
     repository_visibility: RepositoryVisibility
     policy_file: Path = Path("policies/default.yaml")
+    public_code_paths: list[str] = Field(default_factory=list)
 
     @field_validator("policy_file")
     @classmethod
@@ -39,6 +40,13 @@ class RepositoryConfig(BaseModel):
         if value.is_absolute() or ".." in value.parts:
             raise ValueError("policy_file must be a repository-relative path")
         return value
+
+    @field_validator("public_code_paths")
+    @classmethod
+    def public_paths_must_be_scoped(cls, value: list[str]) -> list[str]:
+        if any(not item.strip() or item.strip() in {"*", "**", "**/*"} for item in value):
+            raise ValueError("public_code_paths must contain scoped globs")
+        return [item.replace("\\", "/") for item in value]
 
 
 def load_repository_config(root: Path) -> RepositoryConfig | None:

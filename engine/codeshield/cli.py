@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import sys
+from datetime import date
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
@@ -23,7 +25,17 @@ from codeshield.models.config import (
     resolve_policy_path,
 )
 from codeshield.models.enums import Destination, RecommendedAction
-from codeshield.models.enums import ProtectionMode
+from codeshield.models.enums import (
+    ProtectionMode,
+    ProviderFeature,
+    SegmentKind,
+    SegmentProvenance,
+    TransferDirection,
+)
+from codeshield.models.llm import ContentSegment, LlmPreflightRequest
+from codeshield.models.provider import ProviderAttestation
+from codeshield.llm import LlmPreflightService
+from codeshield.providers import AttestationStore, ProviderRegistry, ProviderRegistryError
 from codeshield.policies import PolicyEngine, PolicyLoadError, load_policy
 from codeshield.pseudonymization import (
     EnvironmentKeyProvider,
@@ -46,7 +58,11 @@ app = typer.Typer(
     help="Local-first sensitive data scanner for developer workflows.",
 )
 policy_app = typer.Typer(help="Validate and inspect destination policy files.")
+provider_app = typer.Typer(help="Inspect provider evidence and local attestations.")
+prompt_app = typer.Typer(help="Assess or protect prompts without sending them.")
 app.add_typer(policy_app, name="policy")
+app.add_typer(provider_app, name="provider")
+app.add_typer(prompt_app, name="prompt")
 
 
 @app.command()
@@ -347,8 +363,159 @@ def validate_policy(
         typer.echo(f"Invalid CodeShield policy: {exc}", err=True)
         raise typer.Exit(3) from exc
     typer.echo(
-        f"Policy '{document.name}' is valid ({len(document.rules)} rule(s))."
+        f"Policy '{document.name}' is valid "
+        f"({len(document.rules)} destination and {len(document.llm_rules)} LLM rule(s))."
     )
+
+
+@provider_app.command("list")
+def provider_list() -> None:
+    """List reviewed provider profiles without account data."""
+
+    try:
+        profiles = ProviderRegistry().list()
+    except ProviderRegistryError as exc:
+        _configuration_error(exc)
+    for profile in profiles:
+        typer.echo(
+            f"{profile.profile_id} {profile.provider} {profile.product} "
+            f"surface={profile.surface} review_due={profile.review_due.isoformat()} "
+            f"reference_only={str(profile.reference_only).lower()}"
+        )
+
+
+@provider_app.command("show")
+def provider_show(profile_id: Annotated[str, typer.Argument()]) -> None:
+    """Show the reviewed facts for one provider profile."""
+
+    try:
+        profile = ProviderRegistry().require(profile_id)
+    except ProviderRegistryError as exc:
+        _configuration_error(exc)
+    typer.echo(json.dumps(profile.model_dump(mode="json"), indent=2))
+
+
+@provider_app.command("attest")
+def provider_attest(
+    profile_id: Annotated[str, typer.Argument()],
+    attestation_id: Annotated[str, typer.Option("--id")],
+    account_hash: Annotated[str, typer.Option("--account-hash")],
+    evidence_digest: Annotated[str, typer.Option("--evidence-digest")],
+    reviewer_id: Annotated[str, typer.Option("--reviewer")],
+    expires_on: Annotated[str, typer.Option("--expires")],
+    control: Annotated[list[str] | None, typer.Option("--control")] = None,
+) -> None:
+    """Record local administrative evidence; no evidence document is stored."""
+
+    try:
+        registry = ProviderRegistry()
+        profile = registry.require(profile_id)
+        attestation = ProviderAttestation(
+            attestation_id=attestation_id,
+            profile_id=profile.profile_id,
+            profile_version=profile.version,
+            account_hash=account_hash,
+            enabled_controls=control or ["reviewed"],
+            evidence_digest=evidence_digest,
+            reviewer_id=reviewer_id,
+            created_on=date.today(),
+            expires_on=date.fromisoformat(expires_on),
+        )
+        AttestationStore().save(attestation, registry)
+    except (ProviderRegistryError, ValueError) as exc:
+        _configuration_error(exc)
+    typer.echo(f"Provider attestation recorded locally: {attestation_id}")
+
+
+@provider_app.command("verify")
+def provider_verify() -> None:
+    """Fail when checked-in provider evidence is stale or inconsistent."""
+
+    try:
+        errors = ProviderRegistry().verify()
+    except ProviderRegistryError as exc:
+        _configuration_error(exc)
+    if errors:
+        for error in errors:
+            typer.echo(error, err=True)
+        raise typer.Exit(3)
+    typer.echo("Provider profiles are current and internally consistent.")
+
+
+@prompt_app.command("assess")
+def prompt_assess(
+    provider: Annotated[str, typer.Option("--provider")],
+    file: Annotated[Path | None, typer.Option("--file")] = None,
+    stdin: Annotated[bool, typer.Option("--stdin")] = False,
+    manifest: Annotated[Path | None, typer.Option("--manifest")] = None,
+    kind: Annotated[SegmentKind, typer.Option("--kind")] = SegmentKind.USER,
+    provenance: Annotated[
+        SegmentProvenance, typer.Option("--provenance")
+    ] = SegmentProvenance.TRUSTED,
+    attestation: Annotated[str | None, typer.Option("--attestation")] = None,
+    direction: Annotated[
+        TransferDirection, typer.Option("--direction")
+    ] = TransferDirection.OUTBOUND,
+    purpose: Annotated[str, typer.Option("--purpose")] = "developer assistance",
+    feature: Annotated[list[ProviderFeature] | None, typer.Option("--feature")] = None,
+    privileged_tools: Annotated[bool, typer.Option("--privileged-tools")] = False,
+) -> None:
+    """Assess file, stdin, or structured manifest content locally."""
+
+    request = _prompt_request(
+        provider=provider,
+        file=file,
+        stdin=stdin,
+        manifest=manifest,
+        kind=kind,
+        provenance=provenance,
+        attestation=attestation,
+        direction=direction,
+        purpose=purpose,
+        features=feature,
+        privileged_tools=privileged_tools,
+    )
+    result = LlmPreflightService().assess(request)
+    typer.echo(json.dumps(result.model_dump(mode="json"), indent=2))
+    raise typer.Exit(_preflight_exit(result.action))
+
+
+@prompt_app.command("protect")
+def prompt_protect(
+    provider: Annotated[str, typer.Option("--provider")],
+    file: Annotated[Path | None, typer.Option("--file")] = None,
+    stdin: Annotated[bool, typer.Option("--stdin")] = False,
+    manifest: Annotated[Path | None, typer.Option("--manifest")] = None,
+    kind: Annotated[SegmentKind, typer.Option("--kind")] = SegmentKind.USER,
+    provenance: Annotated[
+        SegmentProvenance, typer.Option("--provenance")
+    ] = SegmentProvenance.TRUSTED,
+    attestation: Annotated[str | None, typer.Option("--attestation")] = None,
+    direction: Annotated[
+        TransferDirection, typer.Option("--direction")
+    ] = TransferDirection.OUTBOUND,
+    purpose: Annotated[str, typer.Option("--purpose")] = "developer assistance",
+    feature: Annotated[list[ProviderFeature] | None, typer.Option("--feature")] = None,
+    privileged_tools: Annotated[bool, typer.Option("--privileged-tools")] = False,
+) -> None:
+    """Protect eligible content locally and return no content when blocked."""
+
+    request = _prompt_request(
+        provider=provider,
+        file=file,
+        stdin=stdin,
+        manifest=manifest,
+        kind=kind,
+        provenance=provenance,
+        attestation=attestation,
+        direction=direction,
+        purpose=purpose,
+        features=feature,
+        privileged_tools=privileged_tools,
+    )
+    result = LlmPreflightService().protect(request)
+    typer.echo(json.dumps(result.model_dump(mode="json"), indent=2))
+    raise typer.Exit(_preflight_exit(result.assessment.action))
 
 
 @app.command()
@@ -480,6 +647,76 @@ def _hook_manager(repository: Path) -> HookManager:
 def _scanner(policy_path: Path | None) -> CodeShieldScanner:
     policy_engine = PolicyEngine.from_path(policy_path)
     return CodeShieldScanner(policy_engine=policy_engine)
+
+
+def _prompt_request(
+    *,
+    provider: str,
+    file: Path | None,
+    stdin: bool,
+    manifest: Path | None,
+    kind: SegmentKind,
+    provenance: SegmentProvenance,
+    attestation: str | None,
+    direction: TransferDirection,
+    purpose: str,
+    features: list[ProviderFeature] | None,
+    privileged_tools: bool,
+) -> LlmPreflightRequest:
+    if sum((file is not None, stdin, manifest is not None)) != 1:
+        _configuration_error(
+            ValueError("provide exactly one of --file, --stdin, or --manifest")
+        )
+    try:
+        if manifest is not None:
+            payload = json.loads(manifest.read_text(encoding="utf-8"))
+            if not isinstance(payload, dict) or not isinstance(payload.get("segments"), list):
+                raise ValueError("prompt manifest must contain a segments array")
+            segments = [ContentSegment.model_validate(item) for item in payload["segments"]]
+        else:
+            if file is not None:
+                content = file.read_text(encoding="utf-8", errors="replace")
+                path = str(file)
+            else:
+                content = sys.stdin.read()
+                path = None
+            segments = [
+                ContentSegment(
+                    segment_id="input-1",
+                    kind=kind,
+                    content=content,
+                    provenance=provenance,
+                    path=path,
+                )
+            ]
+        return LlmPreflightRequest(
+            segments=segments,
+            provider_profile_id=provider,
+            attestation_id=attestation,
+            direction=direction,
+            purpose=purpose,
+            enabled_features=features or [],
+            privileged_tools=privileged_tools,
+        )
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        _configuration_error(ValueError("invalid prompt input or manifest"))
+
+
+def _preflight_exit(action: RecommendedAction) -> int:
+    if action is RecommendedAction.BLOCK:
+        return 2
+    if action in {
+        RecommendedAction.WARN,
+        RecommendedAction.MASK,
+        RecommendedAction.PSEUDONYMIZE,
+    }:
+        return 1
+    return 0
+
+
+def _configuration_error(exc: Exception) -> None:
+    typer.echo(f"CodeShield configuration/execution error: {exc}", err=True)
+    raise typer.Exit(3) from exc
 
 
 if __name__ == "__main__":

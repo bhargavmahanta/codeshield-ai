@@ -3,7 +3,7 @@ name: CodeShield CI
 on:
   pull_request:
   push:
-    branches: [main, phase-3-review]
+    branches: [main, phase-3-review, phase-4-provider-policy]
 
 permissions:
   contents: read
@@ -36,6 +36,9 @@ jobs:
 
       - name: Secret-free fixture check
         run: python engine/scripts/check_test_fixtures.py
+
+      - name: Provider evidence freshness
+        run: python engine/scripts/check_provider_profiles.py
 
       - name: Install npm workspaces
         run: npm ci

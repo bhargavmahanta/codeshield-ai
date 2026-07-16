@@ -40,6 +40,70 @@
         "title": "AppliedReplacement",
         "type": "object"
       },
+      "AttestationStatus": {
+        "enum": [
+          "valid",
+          "missing",
+          "stale",
+          "invalid"
+        ],
+        "title": "AttestationStatus",
+        "type": "string"
+      },
+      "ContentSegment": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "maxLength": 1000000,
+            "title": "Content",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SegmentKind"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/SegmentProvenance",
+            "default": "trusted"
+          },
+          "segment_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Segment Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "segment_id",
+          "kind",
+          "content"
+        ],
+        "title": "ContentSegment",
+        "type": "object"
+      },
       "ContextAssessment": {
         "properties": {
           "confidence": {
@@ -101,6 +165,21 @@
           "CLOUD_CREDENTIAL",
           "SESSION_ID",
           "FINANCIAL_IDENTIFIER",
+          "GOVERNMENT_IDENTIFIER",
+          "BIOMETRIC_IDENTIFIER",
+          "HEALTH_INFORMATION",
+          "PAYMENT_CARD_DATA",
+          "PAYMENT_AUTHENTICATION_DATA",
+          "CUSTOMER_RECORD",
+          "PRODUCTION_DATA",
+          "PROPRIETARY_SOURCE_CODE",
+          "THIRD_PARTY_SOURCE_CODE",
+          "SYSTEM_PROMPT",
+          "INTERNAL_ARCHITECTURE",
+          "VULNERABILITY_DETAILS",
+          "LEGAL_PRIVILEGED_MATERIAL",
+          "MODEL_CONFIGURATION",
+          "EXPORT_CONTROLLED_CONTENT",
           "UNKNOWN_SECRET"
         ],
         "title": "DataCategory",
@@ -230,6 +309,10 @@
               }
             ]
           },
+          "sensitivity": {
+            "$ref": "#/components/schemas/SensitivityLevel",
+            "default": "internal"
+          },
           "severity": {
             "$ref": "#/components/schemas/Severity"
           },
@@ -288,6 +371,172 @@
           "local_only"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "LlmAssessmentResult": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/RecommendedAction"
+          },
+          "attestation_status": {
+            "$ref": "#/components/schemas/AttestationStatus"
+          },
+          "audit_id": {
+            "title": "Audit Id",
+            "type": "string"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/DataCategory"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "evidence_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Version"
+          },
+          "highest_sensitivity": {
+            "$ref": "#/components/schemas/SensitivityLevel"
+          },
+          "provider_profile_id": {
+            "title": "Provider Profile Id",
+            "type": "string"
+          },
+          "provider_profile_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Profile Version"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "required_transformations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Transformations",
+            "type": "array"
+          },
+          "safe_to_send": {
+            "title": "Safe To Send",
+            "type": "boolean"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/SegmentAssessment"
+            },
+            "title": "Segments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "highest_sensitivity",
+          "categories",
+          "segments",
+          "action",
+          "safe_to_send",
+          "reasons",
+          "required_transformations",
+          "provider_profile_id",
+          "attestation_status",
+          "audit_id"
+        ],
+        "title": "LlmAssessmentResult",
+        "type": "object"
+      },
+      "LlmPreflightRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "attestation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attestation Id"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/TransferDirection",
+            "default": "outbound"
+          },
+          "enabled_features": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderFeature"
+            },
+            "title": "Enabled Features",
+            "type": "array"
+          },
+          "privileged_tools": {
+            "default": false,
+            "title": "Privileged Tools",
+            "type": "boolean"
+          },
+          "provider_profile_id": {
+            "title": "Provider Profile Id",
+            "type": "string"
+          },
+          "purpose": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Purpose",
+            "type": "string"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/ContentSegment"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Segments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "segments",
+          "provider_profile_id",
+          "purpose"
+        ],
+        "title": "LlmPreflightRequest",
+        "type": "object"
+      },
+      "LlmProtectionResult": {
+        "properties": {
+          "assessment": {
+            "$ref": "#/components/schemas/LlmAssessmentResult"
+          },
+          "protected_segments": {
+            "items": {
+              "$ref": "#/components/schemas/ProtectedSegment"
+            },
+            "title": "Protected Segments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "assessment"
+        ],
+        "title": "LlmProtectionResult",
         "type": "object"
       },
       "PolicyDecision": {
@@ -379,6 +628,28 @@
         "title": "ProtectTextRequest",
         "type": "object"
       },
+      "ProtectedSegment": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/SegmentKind"
+          },
+          "protected_content": {
+            "title": "Protected Content",
+            "type": "string"
+          },
+          "segment_id": {
+            "title": "Segment Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "segment_id",
+          "kind",
+          "protected_content"
+        ],
+        "title": "ProtectedSegment",
+        "type": "object"
+      },
       "ProtectionMode": {
         "enum": [
           "redact",
@@ -420,6 +691,19 @@
         ],
         "title": "ProtectionResult",
         "type": "object"
+      },
+      "ProviderFeature": {
+        "enum": [
+          "stateful_storage",
+          "file_upload",
+          "grounding",
+          "extended_cache",
+          "connectors",
+          "code_execution",
+          "workspace_indexing"
+        ],
+        "title": "ProviderFeature",
+        "type": "string"
       },
       "RecommendedAction": {
         "enum": [
@@ -554,6 +838,72 @@
         "title": "ScanTextRequest",
         "type": "object"
       },
+      "SegmentAssessment": {
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/DataCategory"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "prompt_injection_detected": {
+            "default": false,
+            "title": "Prompt Injection Detected",
+            "type": "boolean"
+          },
+          "segment_id": {
+            "title": "Segment Id",
+            "type": "string"
+          },
+          "sensitivity": {
+            "$ref": "#/components/schemas/SensitivityLevel"
+          }
+        },
+        "required": [
+          "segment_id",
+          "sensitivity"
+        ],
+        "title": "SegmentAssessment",
+        "type": "object"
+      },
+      "SegmentKind": {
+        "enum": [
+          "system",
+          "developer",
+          "user",
+          "retrieved",
+          "tool_output",
+          "source_code"
+        ],
+        "title": "SegmentKind",
+        "type": "string"
+      },
+      "SegmentProvenance": {
+        "enum": [
+          "trusted",
+          "untrusted"
+        ],
+        "title": "SegmentProvenance",
+        "type": "string"
+      },
+      "SensitivityLevel": {
+        "enum": [
+          "public",
+          "internal",
+          "confidential",
+          "restricted"
+        ],
+        "title": "SensitivityLevel",
+        "type": "string"
+      },
       "Severity": {
         "enum": [
           "low",
@@ -562,6 +912,14 @@
           "critical"
         ],
         "title": "Severity",
+        "type": "string"
+      },
+      "TransferDirection": {
+        "enum": [
+          "outbound",
+          "inbound"
+        ],
+        "title": "TransferDirection",
         "type": "string"
       },
       "ValidationError": {
@@ -622,7 +980,7 @@
   "info": {
     "description": "Local-only API. Raw sensitive values are never logged.",
     "title": "CodeShield AI Local Engine",
-    "version": "0.3.0"
+    "version": "0.4.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -642,6 +1000,84 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/llm/assess": {
+      "post": {
+        "description": "Assess structured content locally before an LLM trust-boundary crossing.",
+        "operationId": "assess_for_llm_llm_assess_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LlmPreflightRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LlmAssessmentResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Assess For Llm"
+      }
+    },
+    "/llm/protect": {
+      "post": {
+        "description": "Protect eligible content locally; blocked requests return no content.",
+        "operationId": "protect_for_llm_llm_protect_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LlmPreflightRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LlmProtectionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Protect For Llm"
       }
     },
     "/protect": {

@@ -12,6 +12,33 @@ console.log(
   })),
 );
 
+const preflight = await client.assessForLlm({
+  segments: [
+    {
+      segment_id: "demo-source",
+      kind: "source_code",
+      provenance: "trusted",
+      content: `api_key = '${syntheticKey}'`,
+      path: "src/demo.ts",
+      language: "typescript",
+    },
+  ],
+  provider_profile_id: "openai-api-zdr",
+  direction: "outbound",
+  purpose: "phase-4 SDK demonstration",
+  enabled_features: [],
+  privileged_tools: false,
+});
+console.log("LLM preflight:", {
+  action: preflight.action,
+  sensitivity: preflight.highest_sensitivity,
+  safe_to_send: preflight.safe_to_send,
+  finding_count: preflight.segments.reduce(
+    (count, segment) => count + (segment.findings?.length ?? 0),
+    0,
+  ),
+});
+
 const session_id = "phase-3-sdk-demo";
 const protectedResult = await client.protect({
   text: "contact = reviewer@example.test",

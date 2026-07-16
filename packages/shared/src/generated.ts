@@ -21,6 +21,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/llm/assess": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assess For Llm
+         * @description Assess structured content locally before an LLM trust-boundary crossing.
+         */
+        post: operations["assess_for_llm_llm_assess_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm/protect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Protect For Llm
+         * @description Protect eligible content locally; blocked requests return no content.
+         */
+        post: operations["protect_for_llm_llm_protect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/protect": {
         parameters: {
             query?: never;
@@ -106,6 +146,25 @@ export interface components {
             /** Start */
             start: number;
         };
+        /**
+         * AttestationStatus
+         * @enum {string}
+         */
+        AttestationStatus: "valid" | "missing" | "stale" | "invalid";
+        /** ContentSegment */
+        ContentSegment: {
+            /** Content */
+            content: string;
+            kind: components["schemas"]["SegmentKind"];
+            /** Language */
+            language?: string | null;
+            /** Path */
+            path?: string | null;
+            /** @default trusted */
+            provenance: components["schemas"]["SegmentProvenance"];
+            /** Segment Id */
+            segment_id: string;
+        };
         /** ContextAssessment */
         ContextAssessment: {
             /** Confidence */
@@ -125,7 +184,7 @@ export interface components {
          * DataCategory
          * @enum {string}
          */
-        DataCategory: "EMAIL" | "PHONE_NUMBER" | "IP_ADDRESS" | "PERSON" | "LOCATION" | "PASSWORD" | "API_KEY" | "AUTH_TOKEN" | "JWT" | "PRIVATE_KEY" | "DATABASE_CONNECTION_STRING" | "CLOUD_CREDENTIAL" | "SESSION_ID" | "FINANCIAL_IDENTIFIER" | "UNKNOWN_SECRET";
+        DataCategory: "EMAIL" | "PHONE_NUMBER" | "IP_ADDRESS" | "PERSON" | "LOCATION" | "PASSWORD" | "API_KEY" | "AUTH_TOKEN" | "JWT" | "PRIVATE_KEY" | "DATABASE_CONNECTION_STRING" | "CLOUD_CREDENTIAL" | "SESSION_ID" | "FINANCIAL_IDENTIFIER" | "GOVERNMENT_IDENTIFIER" | "BIOMETRIC_IDENTIFIER" | "HEALTH_INFORMATION" | "PAYMENT_CARD_DATA" | "PAYMENT_AUTHENTICATION_DATA" | "CUSTOMER_RECORD" | "PRODUCTION_DATA" | "PROPRIETARY_SOURCE_CODE" | "THIRD_PARTY_SOURCE_CODE" | "SYSTEM_PROMPT" | "INTERNAL_ARCHITECTURE" | "VULNERABILITY_DETAILS" | "LEGAL_PRIVILEGED_MATERIAL" | "MODEL_CONFIGURATION" | "EXPORT_CONTROLLED_CONTENT" | "UNKNOWN_SECRET";
         /**
          * Destination
          * @enum {string}
@@ -166,6 +225,8 @@ export interface components {
             policy_decision?: components["schemas"]["PolicyDecision"] | null;
             recommended_action: components["schemas"]["RecommendedAction"];
             risk?: components["schemas"]["RiskScore"] | null;
+            /** @default internal */
+            sensitivity: components["schemas"]["SensitivityLevel"];
             severity: components["schemas"]["Severity"];
             /** Start */
             start: number;
@@ -183,6 +244,56 @@ export interface components {
             service: string;
             /** Status */
             status: string;
+        };
+        /** LlmAssessmentResult */
+        LlmAssessmentResult: {
+            action: components["schemas"]["RecommendedAction"];
+            attestation_status: components["schemas"]["AttestationStatus"];
+            /** Audit Id */
+            audit_id: string;
+            /** Categories */
+            categories: components["schemas"]["DataCategory"][];
+            /** Evidence Version */
+            evidence_version?: string | null;
+            highest_sensitivity: components["schemas"]["SensitivityLevel"];
+            /** Provider Profile Id */
+            provider_profile_id: string;
+            /** Provider Profile Version */
+            provider_profile_version?: string | null;
+            /** Reasons */
+            reasons: string[];
+            /** Required Transformations */
+            required_transformations: string[];
+            /** Safe To Send */
+            safe_to_send: boolean;
+            /** Segments */
+            segments: components["schemas"]["SegmentAssessment"][];
+        };
+        /** LlmPreflightRequest */
+        LlmPreflightRequest: {
+            /** Attestation Id */
+            attestation_id?: string | null;
+            /** @default outbound */
+            direction: components["schemas"]["TransferDirection"];
+            /** Enabled Features */
+            enabled_features?: components["schemas"]["ProviderFeature"][];
+            /**
+             * Privileged Tools
+             * @default false
+             */
+            privileged_tools: boolean;
+            /** Provider Profile Id */
+            provider_profile_id: string;
+            /** Purpose */
+            purpose: string;
+            /** Segments */
+            segments: components["schemas"]["ContentSegment"][];
+        };
+        /** LlmProtectionResult */
+        LlmProtectionResult: {
+            assessment: components["schemas"]["LlmAssessmentResult"];
+            /** Protected Segments */
+            protected_segments?: components["schemas"]["ProtectedSegment"][];
         };
         /** PolicyDecision */
         PolicyDecision: {
@@ -224,6 +335,14 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** ProtectedSegment */
+        ProtectedSegment: {
+            kind: components["schemas"]["SegmentKind"];
+            /** Protected Content */
+            protected_content: string;
+            /** Segment Id */
+            segment_id: string;
+        };
         /**
          * ProtectionMode
          * @enum {string}
@@ -243,6 +362,11 @@ export interface components {
             /** Replacements */
             replacements?: components["schemas"]["AppliedReplacement"][];
         };
+        /**
+         * ProviderFeature
+         * @enum {string}
+         */
+        ProviderFeature: "stateful_storage" | "file_upload" | "grounding" | "extended_cache" | "connectors" | "code_execution" | "workspace_indexing";
         /**
          * RecommendedAction
          * @enum {string}
@@ -292,11 +416,46 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** SegmentAssessment */
+        SegmentAssessment: {
+            /** Categories */
+            categories?: components["schemas"]["DataCategory"][];
+            /** Findings */
+            findings?: components["schemas"]["Finding"][];
+            /**
+             * Prompt Injection Detected
+             * @default false
+             */
+            prompt_injection_detected: boolean;
+            /** Segment Id */
+            segment_id: string;
+            sensitivity: components["schemas"]["SensitivityLevel"];
+        };
+        /**
+         * SegmentKind
+         * @enum {string}
+         */
+        SegmentKind: "system" | "developer" | "user" | "retrieved" | "tool_output" | "source_code";
+        /**
+         * SegmentProvenance
+         * @enum {string}
+         */
+        SegmentProvenance: "trusted" | "untrusted";
+        /**
+         * SensitivityLevel
+         * @enum {string}
+         */
+        SensitivityLevel: "public" | "internal" | "confidential" | "restricted";
         /**
          * Severity
          * @enum {string}
          */
         Severity: "low" | "medium" | "high" | "critical";
+        /**
+         * TransferDirection
+         * @enum {string}
+         */
+        TransferDirection: "outbound" | "inbound";
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -340,6 +499,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    assess_for_llm_llm_assess_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LlmPreflightRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LlmAssessmentResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    protect_for_llm_llm_protect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LlmPreflightRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LlmProtectionResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

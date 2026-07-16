@@ -7,6 +7,10 @@ export type ProtectionResult = components["schemas"]["ProtectionResult"];
 export type ProtectTextRequest = components["schemas"]["ProtectTextRequest"];
 export type RestoreTextRequest = components["schemas"]["RestoreTextRequest"];
 export type ScanTextRequest = components["schemas"]["ScanTextRequest"];
+export type LlmPreflightRequest = components["schemas"]["LlmPreflightRequest"];
+export type LlmAssessmentResult = components["schemas"]["LlmAssessmentResult"];
+export type LlmProtectionResult = components["schemas"]["LlmProtectionResult"];
+export type ContentSegment = components["schemas"]["ContentSegment"];
 
 export interface HealthResponse {
   status: string;
@@ -77,6 +81,14 @@ export class CodeShieldClient {
 
   restore(payload: RestoreTextRequest): Promise<RestoreResponse> {
     return this.request("/restore", jsonRequest(payload));
+  }
+
+  assessForLlm(payload: LlmPreflightRequest): Promise<LlmAssessmentResult> {
+    return this.request("/llm/assess", jsonRequest(payload));
+  }
+
+  protectForLlm(payload: LlmPreflightRequest): Promise<LlmProtectionResult> {
+    return this.request("/llm/protect", jsonRequest(payload));
   }
 
   private async request<T>(path: string, init: RequestInit): Promise<T> {

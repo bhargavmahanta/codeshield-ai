@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 name: codeshield-default
 scoring:
   sensitivity:
@@ -11,6 +11,21 @@ scoring:
     CLOUD_CREDENTIAL: 35
     SESSION_ID: 30
     FINANCIAL_IDENTIFIER: 28
+    GOVERNMENT_IDENTIFIER: 30
+    BIOMETRIC_IDENTIFIER: 35
+    HEALTH_INFORMATION: 35
+    PAYMENT_CARD_DATA: 32
+    PAYMENT_AUTHENTICATION_DATA: 35
+    CUSTOMER_RECORD: 28
+    PRODUCTION_DATA: 35
+    PROPRIETARY_SOURCE_CODE: 24
+    THIRD_PARTY_SOURCE_CODE: 18
+    SYSTEM_PROMPT: 20
+    INTERNAL_ARCHITECTURE: 28
+    VULNERABILITY_DETAILS: 35
+    LEGAL_PRIVILEGED_MATERIAL: 35
+    MODEL_CONFIGURATION: 25
+    EXPORT_CONTROLLED_CONTENT: 35
     UNKNOWN_SECRET: 24
     EMAIL: 15
     PHONE_NUMBER: 15
@@ -103,3 +118,27 @@ exceptions:
     contexts: [placeholder, test_data]
     expires_on: 2026-08-31
     rationale: Review-only synthetic API key fixture approved until the review ends.
+llm_rules:
+  - rule_id: block-external-restricted
+    sensitivity_levels: [restricted]
+    directions: [outbound, inbound]
+    action: block
+    priority: 100
+    mandatory: true
+    rationale: Restricted content cannot cross an external LLM trust boundary.
+  - rule_id: require-attestation-for-nonpublic
+    sensitivity_levels: [internal, confidential]
+    attestation_statuses: [missing, stale, invalid]
+    directions: [outbound, inbound]
+    action: block
+    priority: 90
+    mandatory: true
+    rationale: Non-public content requires current reviewed provider evidence.
+  - rule_id: protect-personal-external
+    sensitivity_levels: [confidential]
+    data_categories: [EMAIL, PHONE_NUMBER, PERSON, LOCATION, FINANCIAL_IDENTIFIER, GOVERNMENT_IDENTIFIER, BIOMETRIC_IDENTIFIER, HEALTH_INFORMATION, PAYMENT_CARD_DATA, CUSTOMER_RECORD]
+    directions: [outbound]
+    action: pseudonymize
+    priority: 80
+    mandatory: true
+    rationale: Personal data must be protected locally before transfer.

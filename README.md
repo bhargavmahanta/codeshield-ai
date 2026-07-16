@@ -1,6 +1,6 @@
 # CodeShield AI
 
-CodeShield AI is a local-first sensitive-data protection framework for developer workflows. Engine 0.3.0 adds staged Git protection, controlled policy exceptions, a local npm CLI, and a typed loopback SDK to the Phase 2 security engine.
+CodeShield AI is a local-first sensitive-data protection framework for developer workflows. Engine 0.4.0 adds provider-aware prompt and source-code preflight to the staged Git, policy, CLI, API, and SDK protection stack.
 
 The scanner is intentionally local. It never returns complete raw secrets in CLI output or API responses; findings include masked previews only.
 
@@ -35,6 +35,15 @@ The scanner is intentionally local. It never returns complete raw secrets in CLI
 - Private npm workspaces for the Python CLI wrapper, generated API types, and SDK.
 - Python 3.12 and Node 22 CI with contract drift and changed-addition enforcement.
 
+## Phase 4 Features
+
+- Independent semantic categories and Public/Internal/Confidential/Restricted sensitivity.
+- Reviewed, expiring provider profiles for major enterprise APIs and coding assistants.
+- Local account attestations and fail-closed external LLM transfer policy.
+- Structured outbound and inbound prompt assessment with injection/tool safeguards.
+- Local personal-data pseudonymization and mandatory Restricted-content blocking.
+- Metadata-only HMAC audit records with no prompt, source, preview, or raw path columns.
+
 ## Quick Start
 
 Install and test locally from the engine package:
@@ -46,6 +55,7 @@ python -m pytest tests
 codeshield scan ../README.md
 codeshield scan --staged
 codeshield install-hook
+codeshield provider verify
 codeshield server
 ```
 
@@ -74,6 +84,7 @@ codeshield hook-status
 codeshield policy validate policies/default.yaml
 codeshield protect input.txt --mode type_placeholder --output protected.txt
 codeshield evaluate-context
+codeshield prompt assess --provider openai-api-zdr --file prompt.txt
 codeshield version
 ```
 
@@ -109,14 +120,17 @@ Detailed documentation:
 - [Phase 2 implementation plan](docs/phase-2-plan.md)
 - [Phase 2 usage and security guide](docs/phase-2-guide.md)
 - [Phase 3 review and five-minute demo](docs/phase-3-review.md)
+- [Phase 4 prompt and source-code safety](docs/phase-4-prompt-safety.md)
+- [LLM provider data-handling matrix](docs/provider-data-handling.md)
 
 ## Roadmap
 
 1. Completed: context classification, YAML policies, explainable destination-aware controls, masking, and encrypted pseudonymization.
 2. Completed: Git staged-diff scanning, hooks, controlled exceptions, npm CLI, and TypeScript SDK.
-3. Add the VS Code extension.
-4. Add hosted management API, Supabase schema, and dashboard.
-5. Add the mock LLM proxy, logging sanitizer, CI/CD, deployment docs, and full evaluation pipeline.
+3. Completed: provider-aware prompt/source-code classification and preflight.
+4. Add the VS Code extension.
+5. Add hosted management API, Supabase schema, and dashboard.
+6. Add the mock LLM proxy, logging sanitizer, deployment docs, and full evaluation pipeline.
 
 ## License Recommendation
 
