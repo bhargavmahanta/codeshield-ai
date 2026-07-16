@@ -2,3 +2,4 @@
 package-lock.json
 packages/shared/openapi.json
 packages/shared/src/generated.ts
+docs/review-1/architecture/*.svg

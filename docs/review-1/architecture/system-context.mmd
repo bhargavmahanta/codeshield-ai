@@ -1,0 +1,58 @@
+flowchart LR
+    DEV[Developer]
+    APP[Application]
+    SDK[TypeScript SDK]
+    GIT[Git commit]
+    CI[CI pipeline]
+    GH[(GitHub)]
+    LLM[External LLM provider]
+
+    subgraph LOCAL[Trusted local boundary]
+      CLI[CLI and managed hook]
+      API[Loopback FastAPI]
+      ENGINE[CodeShield engine]
+      POLICY[(Policy configuration)]
+      PROFILE[(Provider profiles)]
+      ATTEST[(Local attestations)]
+      VAULT[(Encrypted pseudonym vault)]
+      AUDIT[(Metadata-only audit)]
+    end
+
+    subgraph FUTURE[Roadmap - not implemented]
+      VSC[VS Code extension]
+      PROXY[Transparent LLM proxy]
+      DASH[Dashboard]
+      MGMT[Management API]
+      SUPA[(Supabase)]
+    end
+
+    DEV -->|files and staged additions| CLI
+    GIT -->|added staged lines only| CLI
+    CLI --> ENGINE
+    APP --> SDK -->|structured segments| API --> ENGINE
+    POLICY --> ENGINE
+    PROFILE --> ENGINE
+    ATTEST --> ENGINE
+    ENGINE --> VAULT
+    ENGINE --> AUDIT
+    ENGINE -->|allow, warn, transform, or block| CLI
+    ENGINE -->|decision or protected content| API
+    GIT -->|approved commit| GH
+    CI -->|changed additions| ENGINE
+    GH --> CI
+    APP -->|approved protected content only| LLM
+    LLM -->|untrusted response| APP
+    APP -->|inbound assessment| SDK
+
+    VSC -.-> API
+    PROXY -.-> API
+    DASH -.-> MGMT -.-> SUPA
+
+    classDef external fill:#fff1f2,stroke:#be123c,color:#881337,stroke-width:2px;
+    classDef local fill:#eff6ff,stroke:#2563eb,color:#172554,stroke-width:2px;
+    classDef data fill:#f8fafc,stroke:#64748b,color:#0f172a;
+    classDef future fill:#ffffff,stroke:#64748b,color:#475569,stroke-dasharray:6 4;
+    class DEV,APP,SDK,GIT,CI,GH,LLM external;
+    class CLI,API,ENGINE local;
+    class POLICY,PROFILE,ATTEST,VAULT,AUDIT data;
+    class VSC,PROXY,DASH,MGMT,SUPA future;
