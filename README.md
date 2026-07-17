@@ -1,6 +1,6 @@
 # CodeShield AI
 
-CodeShield AI is a local-first sensitive-data protection framework for developer workflows. Engine 0.4.0 adds provider-aware prompt and source-code preflight to the staged Git, policy, CLI, API, and SDK protection stack.
+CodeShield AI is a local-first sensitive-data protection framework for developer workflows. Engine 0.5.0 adds optional local Presidio/spaCy and Gitleaks detection plus reproducible, metadata-only evaluation to the staged Git, provider policy, CLI, API, and SDK protection stack.
 
 The scanner is intentionally local. It never returns complete raw secrets in CLI output or API responses; findings include masked previews only.
 
@@ -44,6 +44,15 @@ The scanner is intentionally local. It never returns complete raw secrets in CLI
 - Local personal-data pseudonymization and mandatory Restricted-content blocking.
 - Metadata-only HMAC audit records with no prompt, source, preview, or raw path columns.
 
+## Phase 5 Features
+
+- Dependency-light `core` and explicitly enabled `enhanced` detector profiles.
+- Lazy, offline Presidio `2.2.363` analysis with the pinned spaCy English model.
+- Gitleaks `8.30.1` stdin scanning with argument arrays, timeouts, private reports, and safe cleanup.
+- Deterministic synthetic, PII-template, adversarial, and workflow evaluation suites.
+- Exact-span, overlap, category, source, policy, transformation, and latency metrics.
+- Metadata-only JSON/Markdown baselines and CI regression gates.
+
 ## Quick Start
 
 Install and test locally from the engine package:
@@ -85,6 +94,9 @@ codeshield policy validate policies/default.yaml
 codeshield protect input.txt --mode type_placeholder --output protected.txt
 codeshield evaluate-context
 codeshield prompt assess --provider openai-api-zdr --file prompt.txt
+codeshield detector status
+codeshield evaluate prepare --suite phase5
+codeshield evaluate run --profile core --output ../reports/local-core.json
 codeshield version
 ```
 
@@ -109,9 +121,9 @@ masked findings only
 
 ## Current Limitations
 
-- Presidio, spaCy, and Gitleaks/detect-secrets adapters are not yet integrated.
+- The enhanced profile is optional, larger, and slower than the default core profile.
 - npm packages are local/private; VS Code, Supabase, dashboard, and LLM proxy work remain later phases.
-- The context model uses a small synthetic baseline dataset and requires broader evaluation before production use.
+- Current accuracy results use deterministic synthetic and MIT-methodology-derived data; they do not establish real-world performance.
 - Detection relies on regex and entropy heuristics, so false positives and false negatives are expected.
 
 Detailed documentation:
@@ -122,15 +134,16 @@ Detailed documentation:
 - [Phase 3 review and five-minute demo](docs/phase-3-review.md)
 - [Phase 4 prompt and source-code safety](docs/phase-4-prompt-safety.md)
 - [LLM provider data-handling matrix](docs/provider-data-handling.md)
+- [Phase 5 evaluation and detector hardening](docs/phase-5-evaluation.md)
 
 ## Roadmap
 
 1. Completed: context classification, YAML policies, explainable destination-aware controls, masking, and encrypted pseudonymization.
 2. Completed: Git staged-diff scanning, hooks, controlled exceptions, npm CLI, and TypeScript SDK.
 3. Completed: provider-aware prompt/source-code classification and preflight.
-4. Add the VS Code extension.
-5. Add hosted management API, Supabase schema, and dashboard.
-6. Add the mock LLM proxy, logging sanitizer, deployment docs, and full evaluation pipeline.
+4. Completed: optional Presidio/spaCy and Gitleaks adapters with reproducible evaluation gates.
+5. Add the VS Code extension.
+6. Add hosted management API, Supabase schema, dashboard, and later proxy work.
 
 ## License Recommendation
 

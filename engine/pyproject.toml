@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codeshield-engine"
-version = "0.4.0"
+version = "0.5.0"
 description = "Local-first sensitive data scanner for developer workflows."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -25,6 +25,15 @@ dev = [
   "httpx>=0.27,<1.0",
   "pytest>=8.2,<9.0"
 ]
+enhanced = [
+  "presidio-analyzer==2.2.363",
+  "spacy>=3.8,<3.9",
+  "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl#sha256=1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85"
+]
+evaluation = [
+  "presidio-evaluator==0.2.5",
+  "Faker==40.31.0"
+]
 
 [project.scripts]
 codeshield = "codeshield.cli:app"
@@ -35,6 +44,7 @@ include = ["codeshield*"]
 [tool.setuptools.package-data]
 "codeshield.policies" = ["*.yaml"]
 "codeshield.providers" = ["*.yaml"]
+"codeshield.evaluation" = ["*.yaml"]
 
 [tool.pytest.ini_options]
 addopts = "-q --basetemp=.pytest-tmp -p no:cacheprovider"

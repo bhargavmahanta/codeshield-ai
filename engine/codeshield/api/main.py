@@ -21,6 +21,8 @@ from codeshield.models.protection import ProtectionResult
 from codeshield.llm import LlmPreflightService
 from codeshield.pseudonymization import InMemoryKeyProvider, PseudonymVault
 from codeshield.scanner import CodeShieldScanner
+from codeshield.models.config import find_repository_config, resolve_policy_path
+from codeshield.policies import PolicyEngine
 from codeshield.version import __version__
 
 MAX_REQUEST_BYTES = 1_000_000
@@ -42,7 +44,17 @@ app.add_middleware(
     allow_headers=["content-type"],
 )
 
-SCANNER = CodeShieldScanner()
+_CONFIG_ENTRY = find_repository_config()
+if _CONFIG_ENTRY:
+    _REPOSITORY_ROOT, _REPOSITORY_CONFIG = _CONFIG_ENTRY
+    SCANNER = CodeShieldScanner(
+        detector_config=_REPOSITORY_CONFIG.detectors,
+        policy_engine=PolicyEngine.from_path(
+            resolve_policy_path(_REPOSITORY_ROOT, _REPOSITORY_CONFIG)
+        ),
+    )
+else:
+    SCANNER = CodeShieldScanner()
 SESSION_VAULT = PseudonymVault(":memory:", InMemoryKeyProvider())
 
 

@@ -2,6 +2,9 @@
 
 from codeshield.models.context import ContextAssessment, FileContext
 from codeshield.models.config import (
+    DetectorConfig,
+    GitleaksDetectorConfig,
+    PresidioDetectorConfig,
     RepositoryConfig,
     RepositoryConfigError,
     RepositoryVisibility,
@@ -11,6 +14,7 @@ from codeshield.models.enums import (
     DataCategory,
     Destination,
     DetectionSource,
+    DetectorProfile,
     AttestationStatus,
     ProviderDataType,
     ProviderFeature,
@@ -57,8 +61,11 @@ __all__ = [
     "DataCategory",
     "Destination",
     "DetectionSource",
+    "DetectorConfig",
+    "DetectorProfile",
     "FileContext",
     "Finding",
+    "GitleaksDetectorConfig",
     "LlmAssessmentResult",
     "LlmPolicyRule",
     "LlmPreflightRequest",
@@ -68,6 +75,7 @@ __all__ = [
     "PolicyException",
     "PolicyRule",
     "ProtectionMode",
+    "PresidioDetectorConfig",
     "ProtectionResult",
     "ProtectedSegment",
     "ProviderAttestation",

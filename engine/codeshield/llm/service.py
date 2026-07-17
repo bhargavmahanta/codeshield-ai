@@ -29,6 +29,7 @@ from codeshield.models.provider import ProviderProfile
 from codeshield.providers import AttestationStore, ProviderRegistry
 from codeshield.policies import PolicyEngine
 from codeshield.pseudonymization import InMemoryKeyProvider, PseudonymVault, TextProtector
+from codeshield.scanner import CodeShieldScanner
 
 
 class LlmPreflightService:
@@ -306,6 +307,7 @@ def _repository_classifier() -> SegmentClassifier:
         if (root / ".codeshield.yaml").exists():
             config = load_repository_config(root)
             return SegmentClassifier(
+                scanner=CodeShieldScanner(detector_config=config.detectors),
                 public_code_paths=config.public_code_paths if config else [],
                 repository_root=root,
             )

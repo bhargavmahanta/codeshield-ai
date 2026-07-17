@@ -105,6 +105,13 @@ class AttestationStatus(StrEnum):
 class DetectionSource(StrEnum):
     REGEX = "regex"
     ENTROPY = "entropy"
+    PRESIDIO = "presidio"
+    GITLEAKS = "gitleaks"
+
+
+class DetectorProfile(StrEnum):
+    CORE = "core"
+    ENHANCED = "enhanced"
 
 
 class Destination(StrEnum):

@@ -7,9 +7,10 @@ import time
 from pathlib import Path
 
 from codeshield.classifier import ContextClassifier
-from codeshield.detectors import EntropyDetector, RegexDetector, SensitiveDataDetector
+from codeshield.detectors import SensitiveDataDetector, build_detectors
 from codeshield.detectors.dedupe import deduplicate_findings
 from codeshield.models.context import FileContext
+from codeshield.models.config import DetectorConfig
 from codeshield.models.enums import Destination, ProtectionMode
 from codeshield.models.finding import Finding
 from codeshield.models.protection import ProtectionResult
@@ -48,8 +49,9 @@ class CodeShieldScanner:
         policy_engine: PolicyEngine | None = None,
         risk_scorer: RiskScorer | None = None,
         protector: TextProtector | None = None,
+        detector_config: DetectorConfig | None = None,
     ) -> None:
-        self.detectors = detectors or [RegexDetector(), EntropyDetector()]
+        self.detectors = detectors or build_detectors(detector_config)
         self.context_classifier = context_classifier or ContextClassifier()
         self.policy_engine = policy_engine or PolicyEngine()
         self.risk_scorer = risk_scorer or RiskScorer(self.policy_engine.document.scoring)

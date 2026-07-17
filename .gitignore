@@ -9,6 +9,7 @@ pytest-rootcheck*/
 pytest-py312-*/
 pytest-hook-*/
 pytest-phase4-*/
+pytest-phase5-*/
 .mypy_cache/
 .ruff_cache/
 .coverage
@@ -16,11 +17,15 @@ htmlcov/
 
 .venv/
 .venv312/
+.tools/
 venv/
 env/
 
 node_modules/
 .npm-cache/
+.phase5-data/
+.phase5-*.json
+.phase5-*.md
 dist/
 build/
 .eggs/

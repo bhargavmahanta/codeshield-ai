@@ -1,0 +1,496 @@
+{
+  "adapters": {
+    "en-core-web-sm": "3.8.0",
+    "gitleaks": "8.30.1",
+    "presidio-analyzer": "2.2.363",
+    "spacy": "3.8.13"
+  },
+  "codeshield_version": "0.5.0",
+  "configuration_hash": "a33f0c67c7be11c11d68a8a4746309095251cfea973523fb394e1b5c6ef6da3c",
+  "dataset_hashes": {
+    "codeshield-synthetic": "33c7d5b7120b4292ef7d1872f6aa1a0652398b583785f6bd3e23d4b15f75ecbb",
+    "presidio-research-synthetic": "b25f8eb3ea74b841e1176a5836ff402d7b0201457fde5501fe3239be639c0035",
+    "workflow-synthetic": "d72834667a6b10f41e9222e16a0f9b558dd4829efc13a69c1b566d167754ed94"
+  },
+  "metrics": {
+    "adversarial": {
+      "by_category": {
+        "API_KEY": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 1,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 0.0,
+          "true_positive": 0
+        },
+        "UNKNOWN_SECRET": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 0,
+          "false_positive": 1,
+          "precision": 0.0,
+          "recall": 1.0,
+          "true_positive": 0
+        }
+      },
+      "by_detector": {
+        "entropy": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 0,
+          "false_positive": 1,
+          "precision": 0.0,
+          "recall": 1.0,
+          "true_positive": 0
+        }
+      },
+      "case_count": 1,
+      "exact": {
+        "f1": 0.0,
+        "f2": 0.0,
+        "false_negative": 1,
+        "false_positive": 1,
+        "precision": 0.0,
+        "recall": 0.0,
+        "true_positive": 0
+      },
+      "negative_case_count": 0,
+      "negative_case_false_positive_rate": 0.0,
+      "relaxed_overlap": {
+        "f1": 0.0,
+        "f2": 0.0,
+        "false_negative": 1,
+        "false_positive": 1,
+        "precision": 0.0,
+        "recall": 0.0,
+        "true_positive": 0
+      },
+      "strict_macro_f2": 0.0
+    },
+    "all_detection": {
+      "by_category": {
+        "API_KEY": {
+          "f1": 0.8889,
+          "f2": 0.8333,
+          "false_negative": 1,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 0.8,
+          "true_positive": 4
+        },
+        "AUTH_TOKEN": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 0,
+          "false_positive": 1,
+          "precision": 0.0,
+          "recall": 1.0,
+          "true_positive": 0
+        },
+        "DATABASE_CONNECTION_STRING": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "EMAIL": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "JWT": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 1,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 0.0,
+          "true_positive": 0
+        },
+        "LOCATION": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 12
+        },
+        "PASSWORD": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "PERSON": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 4
+        },
+        "PHONE_NUMBER": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "UNKNOWN_SECRET": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 0,
+          "false_positive": 1,
+          "precision": 0.0,
+          "recall": 1.0,
+          "true_positive": 0
+        }
+      },
+      "by_detector": {
+        "entropy": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 0,
+          "false_positive": 1,
+          "precision": 0.0,
+          "recall": 1.0,
+          "true_positive": 0
+        },
+        "gitleaks": {
+          "f1": 0.8889,
+          "f2": 0.9524,
+          "false_negative": 0,
+          "false_positive": 1,
+          "precision": 0.8,
+          "recall": 1.0,
+          "true_positive": 4
+        },
+        "presidio": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 16
+        },
+        "regex": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 4
+        }
+      },
+      "case_count": 34,
+      "exact": {
+        "f1": 0.9231,
+        "f2": 0.9231,
+        "false_negative": 2,
+        "false_positive": 2,
+        "precision": 0.9231,
+        "recall": 0.9231,
+        "true_positive": 24
+      },
+      "negative_case_count": 8,
+      "negative_case_false_positive_rate": 0.0,
+      "relaxed_overlap": {
+        "f1": 0.9231,
+        "f2": 0.9231,
+        "false_negative": 2,
+        "false_positive": 2,
+        "precision": 0.9231,
+        "recall": 0.9231,
+        "true_positive": 24
+      },
+      "strict_macro_f2": 0.6833
+    },
+    "context": {
+      "accuracy": 0.9881,
+      "confusion_matrix": [
+        [
+          12,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          12,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          12,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          12,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          12,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          12,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          11
+        ]
+      ],
+      "dataset": "synthetic",
+      "labels": [
+        "confidential_business_data",
+        "personal_data",
+        "placeholder",
+        "probable_real_secret",
+        "public_information",
+        "test_data",
+        "uncertain"
+      ],
+      "macro_f1": 0.9881,
+      "macro_precision": 0.989,
+      "macro_recall": 0.9881,
+      "seed": 42,
+      "test_records": 84,
+      "training_records": 196
+    },
+    "core_synthetic": {
+      "by_category": {
+        "API_KEY": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 4
+        },
+        "DATABASE_CONNECTION_STRING": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "EMAIL": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "JWT": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "PASSWORD": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "PHONE_NUMBER": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        }
+      },
+      "by_detector": {
+        "regex": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 9
+        }
+      },
+      "case_count": 17,
+      "exact": {
+        "f1": 1.0,
+        "f2": 1.0,
+        "false_negative": 0,
+        "false_positive": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "true_positive": 9
+      },
+      "negative_case_count": 8,
+      "negative_case_false_positive_rate": 0.0,
+      "relaxed_overlap": {
+        "f1": 1.0,
+        "f2": 1.0,
+        "false_negative": 0,
+        "false_positive": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "true_positive": 9
+      },
+      "strict_macro_f2": 1.0
+    },
+    "latency": {
+      "1000": {
+        "cold_ms": 2026.59,
+        "warm_median_ms": 675.28,
+        "warm_p95_ms": 682.55,
+        "warm_p99_ms": 682.55
+      },
+      "10000": {
+        "cold_ms": 1906.78,
+        "warm_median_ms": 682.13,
+        "warm_p95_ms": 791.24,
+        "warm_p99_ms": 791.24
+      },
+      "100000": {
+        "cold_ms": 2286.34,
+        "warm_median_ms": 753.77,
+        "warm_p95_ms": 781.61,
+        "warm_p99_ms": 781.61
+      }
+    },
+    "pii": {
+      "by_category": {
+        "LOCATION": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 12
+        },
+        "PERSON": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 4
+        }
+      },
+      "by_detector": {
+        "presidio": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 16
+        }
+      },
+      "case_count": 16,
+      "exact": {
+        "f1": 1.0,
+        "f2": 1.0,
+        "false_negative": 0,
+        "false_positive": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "true_positive": 16
+      },
+      "negative_case_count": 0,
+      "negative_case_false_positive_rate": 0.0,
+      "relaxed_overlap": {
+        "f1": 1.0,
+        "f2": 1.0,
+        "false_negative": 0,
+        "false_positive": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "true_positive": 16
+      },
+      "strict_macro_f2": 1.0
+    },
+    "workflow": {
+      "case_count": 3,
+      "policy_action_accuracy": 1.0,
+      "privileged_injection_blocking": 1.0,
+      "pseudonym_consistency": 1.0,
+      "restoration_accuracy": 1.0,
+      "restricted_and_mandatory_block_rate": 1.0,
+      "restricted_transfer_blocking": 1.0,
+      "transformation_safety": 1.0
+    }
+  },
+  "platform": {
+    "python": "3.12.10",
+    "system": "Windows"
+  },
+  "profile": "enhanced",
+  "reproducibility_digest": "84b809f4adf6bca30339d41327d503ee79616edce2242010bd34334d1b33d7f9",
+  "schema_version": 1,
+  "seed": 42,
+  "suite": "phase5",
+  "suite_version": "1.0.0"
+}

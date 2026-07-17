@@ -52,5 +52,9 @@ def _category_specificity(category: DataCategory) -> int:
 
 
 def _source_specificity(source: DetectionSource) -> int:
-    return 2 if source is DetectionSource.REGEX else 1
-
+    return {
+        DetectionSource.GITLEAKS: 4,
+        DetectionSource.REGEX: 3,
+        DetectionSource.PRESIDIO: 2,
+        DetectionSource.ENTROPY: 1,
+    }[source]
