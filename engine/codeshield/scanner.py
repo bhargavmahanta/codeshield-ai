@@ -65,11 +65,11 @@ class CodeShieldScanner:
         file_context: FileContext | None = None,
     ) -> list[Finding]:
         findings: list[Finding] = []
+        context = file_context or FileContext()
         for detector in self.detectors:
-            findings.extend(detector.detect(text))
+            findings.extend(detector.detect(text, file_context=context))
         findings = deduplicate_findings(findings)
         assessed: list[Finding] = []
-        context = file_context or FileContext()
         for finding in findings:
             assessment = self.context_classifier.classify(text, finding, context)
             finding = finding.with_context(assessment)
@@ -215,4 +215,13 @@ def _attach_location(finding: Finding, text: str, file_path: Path) -> Finding:
     line = text.count("\n", 0, finding.start) + 1
     last_newline = text.rfind("\n", 0, finding.start)
     column = finding.start + 1 if last_newline == -1 else finding.start - last_newline
-    return finding.with_location(str(file_path), line, column)
+    end_line = text.count("\n", 0, finding.end) + 1
+    end_newline = text.rfind("\n", 0, finding.end)
+    end_column = finding.end + 1 if end_newline == -1 else finding.end - end_newline
+    return finding.with_location(
+        str(file_path),
+        line,
+        column,
+        end_line=end_line,
+        end_column=end_column,
+    )

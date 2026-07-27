@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Callable, Pattern
 
 from codeshield.detectors.masking import mask_value
+from codeshield.models.context import FileContext
 from codeshield.models.enums import (
     DataCategory,
     DetectionSource,
@@ -37,7 +38,10 @@ class RegexDetector:
     def __init__(self, rules: list[RegexRule] | None = None) -> None:
         self.rules = rules or default_rules()
 
-    def detect(self, text: str) -> list[Finding]:
+    def detect(
+        self, text: str, *, file_context: FileContext | None = None
+    ) -> list[Finding]:
+        del file_context
         findings: list[Finding] = []
         for rule in self.rules:
             for match in rule.pattern.finditer(text):
@@ -241,4 +245,3 @@ def _is_probable_phone(value: str) -> bool:
 
 def _is_public_or_specific_ip(value: str) -> bool:
     return value not in {"0.0.0.0", "127.0.0.1", "255.255.255.255"}
-

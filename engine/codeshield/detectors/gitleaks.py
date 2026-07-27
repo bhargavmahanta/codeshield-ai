@@ -11,6 +11,7 @@ from typing import Any
 
 from codeshield.detectors.errors import DetectorExecutionError, DetectorUnavailableError
 from codeshield.detectors.masking import mask_value
+from codeshield.models.context import FileContext
 from codeshield.models.enums import DataCategory, DetectionSource, RecommendedAction, Severity
 from codeshield.models.finding import Finding, build_finding_id
 
@@ -39,7 +40,10 @@ class GitleaksDetector:
         if completed.returncode != 0:
             raise DetectorUnavailableError("Gitleaks availability check failed")
 
-    def detect(self, text: str) -> list[Finding]:
+    def detect(
+        self, text: str, *, file_context: FileContext | None = None
+    ) -> list[Finding]:
+        del file_context
         report_path = self._private_report_path()
         try:
             try:

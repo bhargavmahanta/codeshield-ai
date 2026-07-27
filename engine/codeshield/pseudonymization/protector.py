@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from codeshield.detectors.masking import mask_value
-from codeshield.models.enums import ProtectionMode, RecommendedAction
+from codeshield.models.enums import DetectionSource, ProtectionMode, RecommendedAction
 from codeshield.models.finding import Finding
 from codeshield.models.protection import AppliedReplacement, ProtectionResult
 from codeshield.pseudonymization.vault import PseudonymVault
@@ -29,6 +29,13 @@ class TextProtector:
         ):
             return ProtectionResult(
                 protected_text="", findings=findings, blocked=True
+            )
+        if any(
+            finding.detection_source is DetectionSource.FRAGMENT
+            for finding in findings
+        ):
+            raise ProtectionError(
+                "fragmented findings require manual source refactoring"
             )
         if mode is ProtectionMode.PSEUDONYMIZE and vault is None:
             raise ProtectionError("pseudonymization requires a local encrypted vault")

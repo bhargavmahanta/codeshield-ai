@@ -82,6 +82,12 @@ def _attach_staged_location(finding: Finding, block: StagedTextBlock) -> Finding
     last_newline = block.text.rfind("\n", 0, finding.start)
     column = finding.start + 1 if last_newline == -1 else finding.start - last_newline
     line = block.start_line + line_offset
+    end_line_offset = block.text.count("\n", 0, finding.end)
+    end_newline = block.text.rfind("\n", 0, finding.end)
+    end_column = (
+        finding.end + 1 if end_newline == -1 else finding.end - end_newline
+    )
+    end_line = block.start_line + end_line_offset
     location_id = sha256(
         f"{block.path}:{line}:{column}:{finding.finding_id}".encode("utf-8")
     ).hexdigest()[:24]
@@ -91,6 +97,8 @@ def _attach_staged_location(finding: Finding, block: StagedTextBlock) -> Finding
             "file_path": block.path,
             "line": line,
             "column": column,
+            "end_line": end_line,
+            "end_column": end_column,
         }
     )
 

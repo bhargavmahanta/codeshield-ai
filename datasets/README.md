@@ -1,7 +1,8 @@
 # Datasets
 
 Phase 5 commits only the manifest, deterministic generators, expected digests,
-and aggregate reports. Prepared JSONL files are written under
+and aggregate reports. Phase 6 retains that suite and adds
+`manifest_phase6.yaml` with static-fragment positives and negatives. Prepared JSONL files are written under
 `CODESHIELD_DATA_HOME` (default `~/.codeshield/datasets`) and never committed.
 
 The suite contains CodeShield-generated synthetic cases and templates adapted

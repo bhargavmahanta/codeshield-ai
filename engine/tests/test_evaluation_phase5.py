@@ -44,6 +44,8 @@ def test_core_report_is_safe_reproducible_and_meets_gates(tmp_path: Path) -> Non
         first["metrics"]["core_synthetic"]["negative_case_false_positive_rate"]
         <= 0.05
     )
+    # Preserve the historical Phase 5 exact-span expectation; Phase 6 has
+    # dedicated fragment-aware spans and requires exact recall of 1.0.
     assert first["metrics"]["adversarial"]["exact"]["false_negative"] == 1
     assert first["metrics"]["workflow"]["restricted_transfer_blocking"] == 1.0
     assert first["metrics"]["workflow"]["privileged_injection_blocking"] == 1.0
@@ -53,6 +55,29 @@ def test_core_report_is_safe_reproducible_and_meets_gates(tmp_path: Path) -> Non
     assert "masked_preview" not in serialized
     assert '"text"' not in serialized
     assert first_path.with_suffix(".md").exists()
+
+
+def test_phase6_fragment_suite_is_versioned_safe_and_gated(tmp_path: Path) -> None:
+    report_path = tmp_path / "phase6.json"
+
+    report = run_evaluation(
+        profile=DetectorProfile.CORE,
+        output=report_path,
+        root=tmp_path / "data",
+        suite="phase6",
+    )
+
+    assert report["suite"] == "phase6"
+    assert report["suite_version"] == "1.0.0"
+    assert report["metrics"]["fragments"]["exact"]["recall"] == 1.0
+    assert (
+        report["metrics"]["fragments"]["negative_case_false_positive_rate"]
+        <= 0.02
+    )
+    assert report["metrics"]["latency"]["100000"]["warm_p95_ms"] <= 250
+    serialized = report_path.read_text(encoding="utf-8")
+    assert "sk_" + "live_51" not in serialized
+    assert "masked_preview" not in serialized
 
 
 def test_report_comparison_rejects_security_or_metric_regression(tmp_path: Path) -> None:

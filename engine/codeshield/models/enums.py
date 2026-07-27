@@ -104,6 +104,7 @@ class AttestationStatus(StrEnum):
 
 class DetectionSource(StrEnum):
     REGEX = "regex"
+    FRAGMENT = "fragment"
     ENTROPY = "entropy"
     PRESIDIO = "presidio"
     GITLEAKS = "gitleaks"

@@ -26,6 +26,9 @@ node_modules/
 .phase5-data/
 .phase5-*.json
 .phase5-*.md
+.phase6-data/
+.phase6-*.json
+.phase6-*.md
 dist/
 build/
 .eggs/

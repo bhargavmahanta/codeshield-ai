@@ -26,6 +26,7 @@ class EvaluationCase(BaseModel):
     expected: list[ExpectedSpan] = Field(default_factory=list)
     destination: Destination = Destination.LOCAL_FILE
     expected_action: RecommendedAction | None = None
+    file_path: str | None = None
 
 
 class MetricCounts(BaseModel):

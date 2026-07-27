@@ -19,6 +19,21 @@ from codeshield.models.policy import PolicyDecision
 from codeshield.models.risk import RiskScore
 
 
+class SourceSpan(BaseModel):
+    """A content-free source offset range."""
+
+    model_config = ConfigDict(frozen=True)
+
+    start: int = Field(ge=0)
+    end: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def validate_span(self) -> "SourceSpan":
+        if self.end <= self.start:
+            raise ValueError("source span end must be greater than start")
+        return self
+
+
 class Finding(BaseModel):
     """A masked sensitive-data finding.
 
@@ -42,6 +57,9 @@ class Finding(BaseModel):
     file_path: str | None = None
     line: int | None = Field(default=None, ge=1)
     column: int | None = Field(default=None, ge=1)
+    end_line: int | None = Field(default=None, ge=1)
+    end_column: int | None = Field(default=None, ge=1)
+    fragment_spans: list[SourceSpan] = Field(default_factory=list)
     risk: RiskScore | None = None
     context: ContextAssessment | None = None
     policy_decision: PolicyDecision | None = None
@@ -63,9 +81,23 @@ class Finding(BaseModel):
     def length(self) -> int:
         return self.end - self.start
 
-    def with_location(self, file_path: str, line: int, column: int) -> "Finding":
+    def with_location(
+        self,
+        file_path: str,
+        line: int,
+        column: int,
+        *,
+        end_line: int | None = None,
+        end_column: int | None = None,
+    ) -> "Finding":
         return self.model_copy(
-            update={"file_path": file_path, "line": line, "column": column}
+            update={
+                "file_path": file_path,
+                "line": line,
+                "column": column,
+                "end_line": end_line,
+                "end_column": end_column,
+            }
         )
 
     def with_risk(self, risk: RiskScore) -> "Finding":

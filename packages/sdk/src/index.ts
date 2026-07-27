@@ -11,6 +11,14 @@ export type LlmPreflightRequest = components["schemas"]["LlmPreflightRequest"];
 export type LlmAssessmentResult = components["schemas"]["LlmAssessmentResult"];
 export type LlmProtectionResult = components["schemas"]["LlmProtectionResult"];
 export type ContentSegment = components["schemas"]["ContentSegment"];
+export type DetectorStatusResponse = components["schemas"]["DetectorStatusResponse"];
+export type ProviderProfile = components["schemas"]["ProviderProfile"];
+export type ProviderVerificationResponse =
+  components["schemas"]["ProviderVerificationResponse"];
+export type AttestationStatusRequest =
+  components["schemas"]["AttestationStatusRequest"];
+export type AttestationStatusResponse =
+  components["schemas"]["AttestationStatusResponse"];
 
 export interface HealthResponse {
   status: string;
@@ -65,6 +73,36 @@ export class CodeShieldClient {
 
   version(): Promise<VersionResponse> {
     return this.request("/version", { method: "GET" });
+  }
+
+  detectorStatus(): Promise<DetectorStatusResponse> {
+    return this.request("/detectors/status", { method: "GET" });
+  }
+
+  listProviders(): Promise<ProviderProfile[]> {
+    return this.request("/providers", { method: "GET" });
+  }
+
+  getProvider(profileId: string): Promise<ProviderProfile> {
+    if (!profileId || profileId.length > 128) {
+      throw new CodeShieldApiError("profileId must be between 1 and 128 characters.");
+    }
+    return this.request(`/providers/${encodeURIComponent(profileId)}`, {
+      method: "GET",
+    });
+  }
+
+  verifyProviders(): Promise<ProviderVerificationResponse> {
+    return this.request("/providers/verify", { method: "GET" });
+  }
+
+  attestationStatus(
+    payload: AttestationStatusRequest,
+  ): Promise<AttestationStatusResponse> {
+    return this.request(
+      "/providers/attestations/status",
+      jsonRequest(payload),
+    );
   }
 
   scanText(

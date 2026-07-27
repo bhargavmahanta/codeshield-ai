@@ -28,6 +28,57 @@ def test_version_endpoint() -> None:
     assert response.json() == {"version": __version__}
 
 
+def test_detector_and_provider_metadata_endpoints_are_safe() -> None:
+    client = TestClient(app)
+
+    detectors = client.get("/detectors/status")
+    providers = client.get("/providers")
+    verified = client.get("/providers/verify")
+    profile = client.get("/providers/openai-api-zdr")
+
+    assert detectors.status_code == 200
+    assert detectors.json()["profile"] == "core"
+    assert {item["name"] for item in detectors.json()["detectors"]} >= {
+        "regex",
+        "fragment",
+        "entropy",
+    }
+    assert providers.status_code == 200
+    assert all("profile_id" in item for item in providers.json())
+    assert verified.status_code == 200
+    assert verified.json() == {"valid": True, "issues": []}
+    assert profile.status_code == 200
+    assert profile.json()["profile_id"] == "openai-api-zdr"
+
+
+def test_provider_attestation_status_returns_no_attestation_content() -> None:
+    client = TestClient(app)
+
+    response = client.post(
+        "/providers/attestations/status",
+        json={"profile_id": "openai-api-zdr", "attestation_id": None},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "profile_id": "openai-api-zdr",
+        "profile_version": "2026.07",
+        "status": "missing",
+    }
+    assert "account_hash" not in response.text
+    assert "evidence_digest" not in response.text
+
+
+def test_unknown_provider_metadata_error_is_sanitized() -> None:
+    client = TestClient(app)
+    private_value = "private-provider-identifier"
+
+    response = client.get(f"/providers/{private_value}")
+
+    assert response.status_code == 404
+    assert private_value not in response.text
+
+
 def test_scan_text_endpoint_never_returns_raw_secret() -> None:
     client = TestClient(app)
     raw = "sk_live_51SyntheticTokenValue999"

@@ -41,10 +41,19 @@ class GitleaksDetectorConfig(BaseModel):
     timeout_seconds: float = Field(default=5.0, gt=0.0, le=120.0)
 
 
+class FragmentDetectorConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    enabled: bool = True
+    max_fragments: int = Field(default=8, ge=2, le=16)
+    max_reconstructed_length: int = Field(default=512, ge=32, le=4096)
+
+
 class DetectorConfig(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     profile: DetectorProfile = DetectorProfile.CORE
+    fragments: FragmentDetectorConfig = Field(default_factory=FragmentDetectorConfig)
     presidio: PresidioDetectorConfig = Field(default_factory=PresidioDetectorConfig)
     gitleaks: GitleaksDetectorConfig = Field(default_factory=GitleaksDetectorConfig)
 
