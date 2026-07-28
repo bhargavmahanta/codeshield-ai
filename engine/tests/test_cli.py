@@ -35,7 +35,7 @@ def test_cli_scan_json_blocks_public_git_secret_without_raw_output(tmp_path: Pat
 
     assert result.exit_code == 2
     assert raw not in result.output
-    payload = json.loads(result.output)
+    payload = json.loads(result.stdout)
     assert payload["findings"][0]["recommended_action"] == "block"
 
 
@@ -113,7 +113,7 @@ def test_cli_staged_resolves_config_and_blocks_without_raw_output(
 
     assert result.exit_code == 2
     assert raw not in result.output
-    assert json.loads(result.output)["destination"] == "public_git"
+    assert json.loads(result.stdout)["destination"] == "public_git"
 
 
 def test_cli_staged_requires_destination_without_repository_config(

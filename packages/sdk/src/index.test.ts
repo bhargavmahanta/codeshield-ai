@@ -149,4 +149,44 @@ describe("CodeShieldClient", () => {
 
     expect(String(error)).not.toContain(privateValue);
   });
+
+  it("uses read-only detector and provider interoperability endpoints", async () => {
+    const detectorPayload = { profile: "core", detectors: [] };
+    const profile = {
+      profile_id: "openai-api-zdr",
+      version: "2026.07",
+    };
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(detectorPayload))
+      .mockResolvedValueOnce(jsonResponse([profile]))
+      .mockResolvedValueOnce(jsonResponse(profile))
+      .mockResolvedValueOnce(jsonResponse({ valid: true, issues: [] }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          profile_id: "openai-api-zdr",
+          profile_version: "2026.07",
+          status: "missing",
+        }),
+      );
+    const client = new CodeShieldClient({ fetch: fetchMock });
+
+    await client.detectorStatus();
+    await client.listProviders();
+    await client.getProvider("openai-api-zdr");
+    await client.verifyProviders();
+    await client.attestationStatus({
+      profile_id: "openai-api-zdr",
+      attestation_id: null,
+    });
+
+    expect(fetchMock.mock.calls.map((call) => call[0].toString())).toEqual([
+      "http://127.0.0.1:8765/detectors/status",
+      "http://127.0.0.1:8765/providers",
+      "http://127.0.0.1:8765/providers/openai-api-zdr",
+      "http://127.0.0.1:8765/providers/verify",
+      "http://127.0.0.1:8765/providers/attestations/status",
+    ]);
+    expect(fetchMock.mock.calls[4]?.[1]?.method).toBe("POST");
+  });
 });

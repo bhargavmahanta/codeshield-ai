@@ -1,0 +1,31 @@
+# INERT EXAMPLE: files under .github/examples are not executed by GitHub Actions.
+# Copy this file into .github/workflows only after approving external upload.
+# Uploading shares repository-relative paths and CodeShield finding metadata with GitHub.
+name: CodeShield SARIF example
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  codeshield:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install CodeShield
+        run: python -m pip install -e "./engine"
+      - name: Generate local SARIF
+        run: codeshield scan . --destination private_git --format sarif --output codeshield.sarif
+      - name: Upload SARIF to GitHub code scanning
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: codeshield.sarif
+          category: codeshield

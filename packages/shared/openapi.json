@@ -7,7 +7,7 @@
             "$ref": "#/components/schemas/DataCategory"
           },
           "end": {
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "End",
             "type": "integer"
           },
@@ -24,7 +24,7 @@
             "type": "string"
           },
           "start": {
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Start",
             "type": "integer"
           }
@@ -49,6 +49,58 @@
         ],
         "title": "AttestationStatus",
         "type": "string"
+      },
+      "AttestationStatusRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "attestation_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attestation Id"
+          },
+          "profile_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Profile Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile_id"
+        ],
+        "title": "AttestationStatusRequest",
+        "type": "object"
+      },
+      "AttestationStatusResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "profile_id": {
+            "title": "Profile Id",
+            "type": "string"
+          },
+          "profile_version": {
+            "title": "Profile Version",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttestationStatus"
+          }
+        },
+        "required": [
+          "profile_id",
+          "profile_version",
+          "status"
+        ],
+        "title": "AttestationStatusResponse",
+        "type": "object"
       },
       "ContentSegment": {
         "additionalProperties": false,
@@ -107,8 +159,8 @@
       "ContextAssessment": {
         "properties": {
           "confidence": {
-            "maximum": 1.0,
-            "minimum": 0.0,
+            "maximum": 1,
+            "minimum": 0,
             "title": "Confidence",
             "type": "number"
           },
@@ -202,6 +254,7 @@
       "DetectionSource": {
         "enum": [
           "regex",
+          "fragment",
           "entropy",
           "presidio",
           "gitleaks"
@@ -209,13 +262,72 @@
         "title": "DetectionSource",
         "type": "string"
       },
+      "DetectorProfile": {
+        "enum": [
+          "core",
+          "enhanced"
+        ],
+        "title": "DetectorProfile",
+        "type": "string"
+      },
+      "DetectorStatusItem": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "pattern": "^(ready|disabled|unavailable)$",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "enabled",
+          "available",
+          "status"
+        ],
+        "title": "DetectorStatusItem",
+        "type": "object"
+      },
+      "DetectorStatusResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "detectors": {
+            "items": {
+              "$ref": "#/components/schemas/DetectorStatusItem"
+            },
+            "title": "Detectors",
+            "type": "array"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/DetectorProfile"
+          }
+        },
+        "required": [
+          "profile",
+          "detectors"
+        ],
+        "title": "DetectorStatusResponse",
+        "type": "object"
+      },
       "Finding": {
         "description": "A masked sensitive-data finding.\n\nRaw values are intentionally not part of this model. Detectors may use raw\nvalues only transiently while computing the finding ID and masked preview.",
         "properties": {
           "column": {
             "anyOf": [
               {
-                "minimum": 1.0,
+                "minimum": 1,
                 "type": "integer"
               },
               {
@@ -225,8 +337,8 @@
             "title": "Column"
           },
           "confidence_score": {
-            "maximum": 1.0,
-            "minimum": 0.0,
+            "maximum": 1,
+            "minimum": 0,
             "title": "Confidence Score",
             "type": "number"
           },
@@ -247,9 +359,33 @@
             "$ref": "#/components/schemas/DetectionSource"
           },
           "end": {
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "End",
             "type": "integer"
+          },
+          "end_column": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Column"
+          },
+          "end_line": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Line"
           },
           "explanation": {
             "minLength": 1,
@@ -271,10 +407,17 @@
             "title": "Finding Id",
             "type": "string"
           },
+          "fragment_spans": {
+            "items": {
+              "$ref": "#/components/schemas/SourceSpan"
+            },
+            "title": "Fragment Spans",
+            "type": "array"
+          },
           "line": {
             "anyOf": [
               {
-                "minimum": 1.0,
+                "minimum": 1,
                 "type": "integer"
               },
               {
@@ -319,7 +462,7 @@
             "$ref": "#/components/schemas/Severity"
           },
           "start": {
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Start",
             "type": "integer"
           }
@@ -694,6 +837,24 @@
         "title": "ProtectionResult",
         "type": "object"
       },
+      "ProviderDataType": {
+        "enum": [
+          "prompt",
+          "output",
+          "uploaded_file",
+          "code_workspace_context",
+          "application_state",
+          "cache",
+          "abuse_log",
+          "fine_tuning_data",
+          "feedback",
+          "telemetry",
+          "connector_data",
+          "account_metadata"
+        ],
+        "title": "ProviderDataType",
+        "type": "string"
+      },
       "ProviderFeature": {
         "enum": [
           "stateful_storage",
@@ -706,6 +867,244 @@
         ],
         "title": "ProviderFeature",
         "type": "string"
+      },
+      "ProviderHandlingFact": {
+        "additionalProperties": false,
+        "properties": {
+          "data_type": {
+            "$ref": "#/components/schemas/ProviderDataType"
+          },
+          "human_review_possible": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Human Review Possible"
+          },
+          "notes": {
+            "minLength": 1,
+            "title": "Notes",
+            "type": "string"
+          },
+          "retained": {
+            "title": "Retained",
+            "type": "boolean"
+          },
+          "retention_days": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Days"
+          },
+          "used_for_training": {
+            "title": "Used For Training",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data_type",
+          "retained",
+          "used_for_training",
+          "notes"
+        ],
+        "title": "ProviderHandlingFact",
+        "type": "object"
+      },
+      "ProviderProfile": {
+        "additionalProperties": false,
+        "properties": {
+          "contractual_controls": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Contractual Controls",
+            "type": "array"
+          },
+          "data_residency": {
+            "title": "Data Residency",
+            "type": "string"
+          },
+          "evidence_urls": {
+            "items": {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Evidence Urls",
+            "type": "array"
+          },
+          "handling": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderHandlingFact"
+            },
+            "minItems": 1,
+            "title": "Handling",
+            "type": "array"
+          },
+          "incompatible_confidential_features": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderFeature"
+            },
+            "title": "Incompatible Confidential Features",
+            "type": "array"
+          },
+          "inherent_features": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderFeature"
+            },
+            "title": "Inherent Features",
+            "type": "array"
+          },
+          "maximum_retention_days": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Retention Days"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "processor": {
+            "title": "Processor",
+            "type": "string"
+          },
+          "product": {
+            "title": "Product",
+            "type": "string"
+          },
+          "profile_id": {
+            "pattern": "^[a-z0-9][a-z0-9_-]*$",
+            "title": "Profile Id",
+            "type": "string"
+          },
+          "prohibits_training": {
+            "title": "Prohibits Training",
+            "type": "boolean"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "reference_only": {
+            "default": false,
+            "title": "Reference Only",
+            "type": "boolean"
+          },
+          "review_due": {
+            "format": "date",
+            "title": "Review Due",
+            "type": "string"
+          },
+          "reviewed_on": {
+            "format": "date",
+            "title": "Reviewed On",
+            "type": "string"
+          },
+          "supported_features": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderFeature"
+            },
+            "title": "Supported Features",
+            "type": "array"
+          },
+          "surface": {
+            "title": "Surface",
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^[0-9]+\\.[0-9]+$",
+            "title": "Version",
+            "type": "string"
+          },
+          "zero_data_retention": {
+            "default": false,
+            "title": "Zero Data Retention",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "profile_id",
+          "version",
+          "provider",
+          "product",
+          "plan",
+          "surface",
+          "processor",
+          "prohibits_training",
+          "data_residency",
+          "handling",
+          "evidence_urls",
+          "reviewed_on",
+          "review_due"
+        ],
+        "title": "ProviderProfile",
+        "type": "object"
+      },
+      "ProviderVerificationIssue": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "pattern": "^[a-z_]+$",
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "profile_id": {
+            "title": "Profile Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile_id",
+          "code",
+          "message"
+        ],
+        "title": "ProviderVerificationIssue",
+        "type": "object"
+      },
+      "ProviderVerificationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderVerificationIssue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid",
+          "issues"
+        ],
+        "title": "ProviderVerificationResponse",
+        "type": "object"
       },
       "RecommendedAction": {
         "enum": [
@@ -756,8 +1155,8 @@
       "RiskFactor": {
         "properties": {
           "contribution": {
-            "maximum": 100.0,
-            "minimum": 0.0,
+            "maximum": 100,
+            "minimum": 0,
             "title": "Contribution",
             "type": "integer"
           },
@@ -774,8 +1173,8 @@
             "type": "string"
           },
           "weight": {
-            "maximum": 100.0,
-            "minimum": 0.0,
+            "maximum": 100,
+            "minimum": 0,
             "title": "Weight",
             "type": "integer"
           }
@@ -803,8 +1202,8 @@
             "$ref": "#/components/schemas/RecommendedAction"
           },
           "score": {
-            "maximum": 100.0,
-            "minimum": 0.0,
+            "maximum": 100,
+            "minimum": 0,
             "title": "Score",
             "type": "integer"
           },
@@ -916,6 +1315,27 @@
         "title": "Severity",
         "type": "string"
       },
+      "SourceSpan": {
+        "description": "A content-free source offset range.",
+        "properties": {
+          "end": {
+            "exclusiveMinimum": 0,
+            "title": "End",
+            "type": "integer"
+          },
+          "start": {
+            "minimum": 0,
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "SourceSpan",
+        "type": "object"
+      },
       "TransferDirection": {
         "enum": [
           "outbound",
@@ -982,10 +1402,28 @@
   "info": {
     "description": "Local-only API. Raw sensitive values are never logged.",
     "title": "CodeShield AI Local Engine",
-    "version": "0.5.0"
+    "version": "0.6.0"
   },
   "openapi": "3.1.0",
   "paths": {
+    "/detectors/status": {
+      "get": {
+        "operationId": "get_detector_status_detectors_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetectorStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Detector Status"
+      }
+    },
     "/health": {
       "get": {
         "operationId": "health_health_get",
@@ -1118,6 +1556,123 @@
           }
         },
         "summary": "Protect Text"
+      }
+    },
+    "/providers": {
+      "get": {
+        "operationId": "list_providers_providers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderProfile"
+                  },
+                  "title": "Response List Providers Providers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Providers"
+      }
+    },
+    "/providers/attestations/status": {
+      "post": {
+        "operationId": "provider_attestation_status_providers_attestations_status_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttestationStatusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttestationStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Provider Attestation Status"
+      }
+    },
+    "/providers/verify": {
+      "get": {
+        "operationId": "verify_providers_providers_verify_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderVerificationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Verify Providers"
+      }
+    },
+    "/providers/{profile_id}": {
+      "get": {
+        "operationId": "get_provider_providers__profile_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "title": "Profile Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderProfile"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Provider"
       }
     },
     "/restore": {

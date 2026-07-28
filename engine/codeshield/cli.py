@@ -50,11 +50,13 @@ from codeshield.scanner import DEFAULT_MAX_FILE_SIZE, CodeShieldScanner, ScanTim
 from codeshield.detectors import DetectorError, detector_status
 from codeshield.version import __version__
 from codeshield.evaluation import EvaluationError, compare_reports, prepare_suite, run_evaluation
+from codeshield.sarif import SarifError, render_sarif, write_output
 
 
 class OutputFormat(StrEnum):
     HUMAN = "human"
     JSON = "json"
+    SARIF = "sarif"
 
 
 app = typer.Typer(
@@ -94,10 +96,18 @@ def scan(
         Destination | None,
         typer.Option("--destination", "-d", help="Intended destination for exposure risk."),
     ] = None,
+    output_format: Annotated[
+        OutputFormat | None,
+        typer.Option("--format", help="Output format: human, json, or sarif."),
+    ] = None,
     output: Annotated[
-        OutputFormat,
-        typer.Option("--output", "-o", help="Output format."),
-    ] = OutputFormat.HUMAN,
+        str | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Output path; legacy human/json format values remain accepted.",
+        ),
+    ] = None,
     exclude: Annotated[
         list[str] | None,
         typer.Option("--exclude", "-e", help="Glob pattern to exclude."),
@@ -118,12 +128,13 @@ def scan(
     """Scan a path or only added lines in the staged Git diff."""
 
     try:
+        selected_format, output_path = _resolve_scan_output(output_format, output)
         if staged == (path is not None):
             raise RepositoryConfigError(
                 "provide either FILE_OR_DIRECTORY or --staged, but not both"
             )
         if staged:
-            result = _scan_staged(
+            result, source_root = _scan_staged(
                 repository=repository,
                 destination=destination,
                 excludes=exclude,
@@ -146,6 +157,11 @@ def scan(
                 max_file_size=max_file_size,
                 timeout_seconds=timeout_seconds,
             )
+            source_root = (
+                config_entry[0]
+                if config_entry
+                else (path.resolve() if path.is_dir() else path.resolve().parent)
+            )
     except ScanTimeoutError as exc:
         typer.echo(f"CodeShield configuration/execution error: {exc}", err=True)
         raise typer.Exit(3) from exc
@@ -155,11 +171,21 @@ def scan(
         PolicyLoadError,
         RepositoryConfigError,
         DetectorError,
+        SarifError,
     ) as exc:
         typer.echo(f"CodeShield configuration/execution error: {exc}", err=True)
         raise typer.Exit(3) from exc
 
-    _print_result(result, output)
+    try:
+        _emit_result(
+            result,
+            selected_format,
+            output_path=output_path,
+            source_root=source_root,
+        )
+    except SarifError as exc:
+        typer.echo(f"CodeShield configuration/execution error: {exc}", err=True)
+        raise typer.Exit(3) from exc
 
     raise typer.Exit(_exit_code(result.findings))
 
@@ -174,10 +200,14 @@ def check_staged(
         Destination | None,
         typer.Option("--destination", "-d"),
     ] = None,
+    output_format: Annotated[
+        OutputFormat | None,
+        typer.Option("--format"),
+    ] = None,
     output: Annotated[
-        OutputFormat,
+        str | None,
         typer.Option("--output", "-o"),
-    ] = OutputFormat.HUMAN,
+    ] = None,
     exclude: Annotated[
         list[str] | None,
         typer.Option("--exclude", "-e"),
@@ -191,7 +221,8 @@ def check_staged(
     """Check staged additions for a commit; warnings do not block the commit."""
 
     try:
-        result = _scan_staged(
+        selected_format, output_path = _resolve_scan_output(output_format, output)
+        result, source_root = _scan_staged(
             repository=repository,
             destination=destination,
             excludes=exclude,
@@ -205,11 +236,21 @@ def check_staged(
         RepositoryConfigError,
         ScanTimeoutError,
         DetectorError,
+        SarifError,
     ) as exc:
         typer.echo(f"CodeShield configuration/execution error: {exc}", err=True)
         raise typer.Exit(3) from exc
 
-    _print_result(result, output)
+    try:
+        _emit_result(
+            result,
+            selected_format,
+            output_path=output_path,
+            source_root=source_root,
+        )
+    except SarifError as exc:
+        typer.echo(f"CodeShield configuration/execution error: {exc}", err=True)
+        raise typer.Exit(3) from exc
     raise typer.Exit(2 if _exit_code(result.findings) == 2 else 0)
 
 
@@ -604,11 +645,12 @@ def evaluate_prepare(
 def evaluate_run(
     profile: Annotated[DetectorProfile, typer.Option("--profile")],
     output: Annotated[Path, typer.Option("--output")],
+    suite: Annotated[str, typer.Option("--suite")] = "phase5",
 ) -> None:
     """Run a profile evaluation and write safe JSON and Markdown reports."""
 
     try:
-        report = run_evaluation(profile=profile, output=output)
+        report = run_evaluation(profile=profile, output=output, suite=suite)
     except (EvaluationError, DetectorError, OSError) as exc:
         _configuration_error(exc)
     typer.echo(
@@ -640,13 +682,13 @@ def evaluate_compare(
         raise typer.Exit(2)
 
 
-def _print_human_result(result: object) -> None:
+def _render_human_result(result: object) -> str:
     findings = result.findings
-    typer.echo(
+    lines = [
         f"CodeShield scan complete: {len(findings)} finding(s), "
         f"{result.files_scanned} file(s) scanned, "
         f"{len(result.files_skipped)} skipped."
-    )
+    ]
     for finding in findings:
         location = finding.file_path or "<text>"
         if finding.line and finding.column:
@@ -663,7 +705,7 @@ def _print_human_result(result: object) -> None:
             if finding.policy_decision and finding.policy_decision.exception_id
             else "none"
         )
-        typer.echo(
+        lines.append(
             f"{location} {finding.data_category.value} "
             f"{finding.severity.value} action={finding.recommended_action.value} "
             f"risk={risk} context={context} policy={policy} "
@@ -671,7 +713,8 @@ def _print_human_result(result: object) -> None:
             f"preview={finding.masked_preview} - {finding.explanation}"
         )
     for skipped in result.files_skipped:
-        typer.echo(f"skipped {skipped.path}: {skipped.reason}")
+        lines.append(f"skipped {skipped.path}: {skipped.reason}")
+    return "\n".join(lines) + "\n"
 
 
 def _exit_code(findings: list[object]) -> int:
@@ -690,11 +733,38 @@ def _exit_code(findings: list[object]) -> int:
     return 0
 
 
-def _print_result(result: object, output: OutputFormat) -> None:
-    if output is OutputFormat.JSON:
-        typer.echo(json.dumps(result.model_dump(mode="json"), indent=2))
+def _resolve_scan_output(
+    output_format: OutputFormat | None, output: str | None
+) -> tuple[OutputFormat, Path | None]:
+    if output_format is None and output in {
+        OutputFormat.HUMAN.value,
+        OutputFormat.JSON.value,
+    }:
+        typer.echo(
+            "CodeShield notice: --output as a format is deprecated; use --format.",
+            err=True,
+        )
+        return OutputFormat(output), None
+    return output_format or OutputFormat.HUMAN, Path(output) if output else None
+
+
+def _emit_result(
+    result: object,
+    output_format: OutputFormat,
+    *,
+    output_path: Path | None,
+    source_root: Path,
+) -> None:
+    if output_format is OutputFormat.JSON:
+        content = json.dumps(result.model_dump(mode="json"), indent=2) + "\n"
+    elif output_format is OutputFormat.SARIF:
+        content = render_sarif(result, source_root=source_root)
     else:
-        _print_human_result(result)
+        content = _render_human_result(result)
+    if output_path is not None:
+        write_output(output_path, content)
+    else:
+        typer.echo(content, nl=False)
 
 
 def _scan_staged(
@@ -704,7 +774,7 @@ def _scan_staged(
     excludes: list[str] | None,
     timeout_seconds: float,
     policy: Path | None,
-) -> object:
+) -> tuple[object, Path]:
     git_repository = GitRepository.discover(
         repository, timeout_seconds=timeout_seconds
     )
@@ -721,13 +791,16 @@ def _scan_staged(
     repository_visibility = (
         config.repository_visibility.value if config is not None else None
     )
-    return StagedGitScanner(_scanner(policy, config.detectors if config else None)).scan(
+    result = StagedGitScanner(
+        _scanner(policy, config.detectors if config else None)
+    ).scan(
         git_repository,
         destination=destination,
         excludes=excludes,
         timeout_seconds=timeout_seconds,
         repository_visibility=repository_visibility,
     )
+    return result, git_repository.root
 
 
 def _hook_manager(repository: Path) -> HookManager:

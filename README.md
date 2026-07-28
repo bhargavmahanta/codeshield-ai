@@ -1,6 +1,6 @@
 # CodeShield AI
 
-CodeShield AI is a local-first sensitive-data protection framework for developer workflows. Engine 0.5.0 adds optional local Presidio/spaCy and Gitleaks detection plus reproducible, metadata-only evaluation to the staged Git, provider policy, CLI, API, and SDK protection stack.
+CodeShield AI is a local-first sensitive-data protection framework for developer workflows. Engine 0.6.0 adds cross-platform build hardening, secure SARIF 2.1.0, static fragmented-secret detection, and read-only interoperability APIs to the staged Git, provider policy, CLI, API, and SDK protection stack.
 
 The scanner is intentionally local. It never returns complete raw secrets in CLI output or API responses; findings include masked previews only.
 
@@ -53,6 +53,14 @@ The scanner is intentionally local. It never returns complete raw secrets in CLI
 - Exact-span, overlap, category, source, policy, transformation, and latency metrics.
 - Metadata-only JSON/Markdown baselines and CI regression gates.
 
+## Phase 6 Features
+
+- Safe repeatable TypeScript builds and temporary contract generation on Windows and Linux.
+- Deterministic SARIF 2.1.0 for path and staged scans with repository-relative locations.
+- Conservative static reconstruction for Python, JavaScript, TypeScript, and explicit JSON part arrays.
+- Read-only detector, provider, verification, and attestation-status API/SDK interfaces.
+- Versioned Phase 6 fragment evaluation with false-positive and latency gates.
+
 ## Quick Start
 
 Install and test locally from the engine package:
@@ -87,7 +95,8 @@ http://127.0.0.1:8765/health
 ```powershell
 codeshield scan .
 codeshield scan . --destination public_git
-codeshield scan path/to/file.txt --output json
+codeshield scan path/to/file.txt --format json
+codeshield scan . --format sarif --output codeshield.sarif
 codeshield check-staged
 codeshield hook-status
 codeshield policy validate policies/default.yaml
@@ -97,6 +106,7 @@ codeshield prompt assess --provider openai-api-zdr --file prompt.txt
 codeshield detector status
 codeshield evaluate prepare --suite phase5
 codeshield evaluate run --profile core --output ../reports/local-core.json
+codeshield evaluate run --suite phase6 --profile core --output ../reports/local-phase6.json
 codeshield version
 ```
 
@@ -135,6 +145,7 @@ Detailed documentation:
 - [Phase 4 prompt and source-code safety](docs/phase-4-prompt-safety.md)
 - [LLM provider data-handling matrix](docs/provider-data-handling.md)
 - [Phase 5 evaluation and detector hardening](docs/phase-5-evaluation.md)
+- [Phase 6 cross-platform hardening and interoperability](docs/phase-6-hardening.md)
 
 ## Roadmap
 
@@ -142,8 +153,9 @@ Detailed documentation:
 2. Completed: Git staged-diff scanning, hooks, controlled exceptions, npm CLI, and TypeScript SDK.
 3. Completed: provider-aware prompt/source-code classification and preflight.
 4. Completed: optional Presidio/spaCy and Gitleaks adapters with reproducible evaluation gates.
-5. Add the VS Code extension.
-6. Add hosted management API, Supabase schema, dashboard, and later proxy work.
+5. Completed: cross-platform builds, SARIF, fragment-aware detection, and interoperability APIs.
+6. Add the VS Code extension.
+7. Add hosted management API, Supabase schema, dashboard, and later proxy work.
 
 ## License Recommendation
 

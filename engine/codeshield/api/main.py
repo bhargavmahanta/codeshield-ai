@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from codeshield.models.enums import Destination, ProtectionMode
+from codeshield.models.enums import AttestationStatus, DetectorProfile
 from codeshield.models.finding import Finding
 from codeshield.models.llm import (
     LlmAssessmentResult,
@@ -22,7 +23,11 @@ from codeshield.llm import LlmPreflightService
 from codeshield.pseudonymization import InMemoryKeyProvider, PseudonymVault
 from codeshield.scanner import CodeShieldScanner
 from codeshield.models.config import find_repository_config, resolve_policy_path
+from codeshield.models.config import DetectorConfig
+from codeshield.models.provider import ProviderProfile
 from codeshield.policies import PolicyEngine
+from codeshield.providers import AttestationStore, ProviderRegistry, ProviderRegistryError
+from codeshield.detectors import detector_status
 from codeshield.version import __version__
 
 MAX_REQUEST_BYTES = 1_000_000
@@ -55,6 +60,9 @@ if _CONFIG_ENTRY:
     )
 else:
     SCANNER = CodeShieldScanner()
+DETECTOR_SETTINGS = (
+    _REPOSITORY_CONFIG.detectors if _CONFIG_ENTRY else DetectorConfig()
+)
 SESSION_VAULT = PseudonymVault(":memory:", InMemoryKeyProvider())
 
 
@@ -89,6 +97,52 @@ class VersionResponse(BaseModel):
 
 class RestoreTextResponse(BaseModel):
     restored_text: str
+
+
+class DetectorStatusItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    enabled: bool
+    available: bool
+    status: str = Field(pattern=r"^(ready|disabled|unavailable)$")
+
+
+class DetectorStatusResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    profile: DetectorProfile
+    detectors: list[DetectorStatusItem]
+
+
+class ProviderVerificationIssue(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    profile_id: str
+    code: str = Field(pattern=r"^[a-z_]+$")
+    message: str
+
+
+class ProviderVerificationResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    valid: bool
+    issues: list[ProviderVerificationIssue]
+
+
+class AttestationStatusRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    profile_id: str = Field(min_length=1, max_length=128)
+    attestation_id: str | None = Field(default=None, min_length=1, max_length=128)
+
+
+class AttestationStatusResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    profile_id: str
+    profile_version: str
+    status: AttestationStatus
 
 
 @app.exception_handler(RequestValidationError)
@@ -126,6 +180,82 @@ def health() -> HealthResponse:
 @app.get("/version", response_model=VersionResponse)
 def version() -> VersionResponse:
     return VersionResponse(version=__version__)
+
+
+@app.get("/detectors/status", response_model=DetectorStatusResponse)
+def get_detector_status() -> DetectorStatusResponse:
+    entries = []
+    for item in detector_status(DETECTOR_SETTINGS):
+        enabled = bool(item["enabled"])
+        available = bool(item["available"])
+        status = "ready" if enabled and available else (
+            "unavailable" if enabled else "disabled"
+        )
+        entries.append(
+            DetectorStatusItem(
+                name=str(item["name"]),
+                enabled=enabled,
+                available=available,
+                status=status,
+            )
+        )
+    return DetectorStatusResponse(
+        profile=DETECTOR_SETTINGS.profile,
+        detectors=entries,
+    )
+
+
+@app.get("/providers", response_model=list[ProviderProfile])
+def list_providers() -> list[ProviderProfile]:
+    try:
+        return ProviderRegistry().list()
+    except ProviderRegistryError as exc:
+        raise HTTPException(
+            status_code=500, detail="provider registry is unavailable"
+        ) from exc
+
+
+@app.get("/providers/verify", response_model=ProviderVerificationResponse)
+def verify_providers() -> ProviderVerificationResponse:
+    try:
+        errors = ProviderRegistry().verify()
+    except ProviderRegistryError as exc:
+        raise HTTPException(
+            status_code=500, detail="provider registry is unavailable"
+        ) from exc
+    issues = [_provider_verification_issue(error) for error in errors]
+    return ProviderVerificationResponse(valid=not issues, issues=issues)
+
+
+@app.post(
+    "/providers/attestations/status",
+    response_model=AttestationStatusResponse,
+)
+def provider_attestation_status(
+    payload: AttestationStatusRequest,
+) -> AttestationStatusResponse:
+    try:
+        profile = ProviderRegistry().require(payload.profile_id)
+        status, _ = AttestationStore().status(payload.attestation_id, profile)
+    except ProviderRegistryError as exc:
+        raise HTTPException(
+            status_code=404, detail="provider profile was not found"
+        ) from exc
+    return AttestationStatusResponse(
+        profile_id=profile.profile_id,
+        profile_version=profile.version,
+        status=status,
+    )
+
+
+@app.get("/providers/{profile_id}", response_model=ProviderProfile)
+def get_provider(profile_id: str) -> ProviderProfile:
+    try:
+        return ProviderRegistry().require(profile_id)
+    except ProviderRegistryError as exc:
+        raise HTTPException(
+            status_code=404, detail="provider profile was not found"
+        ) from exc
 
 
 @app.post("/scan/text", response_model=list[Finding])
@@ -173,3 +303,35 @@ def protect_for_llm(payload: LlmPreflightRequest) -> LlmProtectionResult:
     """Protect eligible content locally; blocked requests return no content."""
 
     return LlmPreflightService().protect(payload)
+
+
+def _provider_verification_issue(error: str) -> ProviderVerificationIssue:
+    profile_id, _, detail = error.partition(":")
+    message = detail.strip()
+    code = "invalid_profile"
+    if "evidence is stale" in message:
+        code = "evidence_stale"
+    elif "ZDR conflicts with retention" in message:
+        code = "zdr_retention_conflict"
+    elif "reference profile cannot claim ZDR" in message:
+        code = "reference_zdr_conflict"
+    elif "no-training claim" in message:
+        code = "training_claim_conflict"
+    elif "exceeds profile retention" in message:
+        code = "retention_limit_conflict"
+    elif "ZDR prompt/output" in message:
+        code = "zdr_handling_conflict"
+    safe_messages = {
+        "evidence_stale": "Provider evidence requires review.",
+        "zdr_retention_conflict": "Zero-retention and retention settings conflict.",
+        "reference_zdr_conflict": "Reference profile cannot claim zero retention.",
+        "training_claim_conflict": "Training statements are inconsistent.",
+        "retention_limit_conflict": "Handling exceeds the profile retention limit.",
+        "zdr_handling_conflict": "Zero-retention handling is inconsistent.",
+        "invalid_profile": "Provider profile validation failed.",
+    }
+    return ProviderVerificationIssue(
+        profile_id=profile_id,
+        code=code,
+        message=safe_messages[code],
+    )

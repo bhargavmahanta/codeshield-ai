@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/detectors/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Detector Status */
+        get: operations["get_detector_status_detectors_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -72,6 +89,74 @@ export interface paths {
         put?: never;
         /** Protect Text */
         post: operations["protect_text_protect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Providers */
+        get: operations["list_providers_providers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/{profile_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Provider */
+        get: operations["get_provider_providers__profile_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/attestations/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Provider Attestation Status */
+        post: operations["provider_attestation_status_providers_attestations_status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verify Providers */
+        get: operations["verify_providers_providers_verify_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -151,6 +236,21 @@ export interface components {
          * @enum {string}
          */
         AttestationStatus: "valid" | "missing" | "stale" | "invalid";
+        /** AttestationStatusRequest */
+        AttestationStatusRequest: {
+            /** Attestation Id */
+            attestation_id?: string | null;
+            /** Profile Id */
+            profile_id: string;
+        };
+        /** AttestationStatusResponse */
+        AttestationStatusResponse: {
+            /** Profile Id */
+            profile_id: string;
+            /** Profile Version */
+            profile_version: string;
+            status: components["schemas"]["AttestationStatus"];
+        };
         /** ContentSegment */
         ContentSegment: {
             /** Content */
@@ -194,7 +294,29 @@ export interface components {
          * DetectionSource
          * @enum {string}
          */
-        DetectionSource: "regex" | "entropy" | "presidio" | "gitleaks";
+        DetectionSource: "regex" | "fragment" | "entropy" | "presidio" | "gitleaks";
+        /**
+         * DetectorProfile
+         * @enum {string}
+         */
+        DetectorProfile: "core" | "enhanced";
+        /** DetectorStatusItem */
+        DetectorStatusItem: {
+            /** Available */
+            available: boolean;
+            /** Enabled */
+            enabled: boolean;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+        };
+        /** DetectorStatusResponse */
+        DetectorStatusResponse: {
+            /** Detectors */
+            detectors: components["schemas"]["DetectorStatusItem"][];
+            profile: components["schemas"]["DetectorProfile"];
+        };
         /**
          * Finding
          * @description A masked sensitive-data finding.
@@ -212,12 +334,18 @@ export interface components {
             detection_source: components["schemas"]["DetectionSource"];
             /** End */
             end: number;
+            /** End Column */
+            end_column?: number | null;
+            /** End Line */
+            end_line?: number | null;
             /** Explanation */
             explanation: string;
             /** File Path */
             file_path?: string | null;
             /** Finding Id */
             finding_id: string;
+            /** Fragment Spans */
+            fragment_spans?: components["schemas"]["SourceSpan"][];
             /** Line */
             line?: number | null;
             /** Masked Preview */
@@ -231,11 +359,6 @@ export interface components {
             /** Start */
             start: number;
         };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
-        };
         /** HealthResponse */
         HealthResponse: {
             /** Local Only */
@@ -244,6 +367,11 @@ export interface components {
             service: string;
             /** Status */
             status: string;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
         };
         /** LlmAssessmentResult */
         LlmAssessmentResult: {
@@ -321,20 +449,6 @@ export interface components {
              */
             rationale: string;
         };
-        /** ProtectTextRequest */
-        ProtectTextRequest: {
-            /** @default local_file */
-            destination: components["schemas"]["Destination"];
-            /** @default type_placeholder */
-            mode: components["schemas"]["ProtectionMode"];
-            /**
-             * Session Id
-             * @default default
-             */
-            session_id: string;
-            /** Text */
-            text: string;
-        };
         /** ProtectedSegment */
         ProtectedSegment: {
             kind: components["schemas"]["SegmentKind"];
@@ -362,11 +476,115 @@ export interface components {
             /** Replacements */
             replacements?: components["schemas"]["AppliedReplacement"][];
         };
+        /** ProtectTextRequest */
+        ProtectTextRequest: {
+            /** @default local_file */
+            destination: components["schemas"]["Destination"];
+            /** @default type_placeholder */
+            mode: components["schemas"]["ProtectionMode"];
+            /**
+             * Session Id
+             * @default default
+             */
+            session_id: string;
+            /** Text */
+            text: string;
+        };
+        /**
+         * ProviderDataType
+         * @enum {string}
+         */
+        ProviderDataType: "prompt" | "output" | "uploaded_file" | "code_workspace_context" | "application_state" | "cache" | "abuse_log" | "fine_tuning_data" | "feedback" | "telemetry" | "connector_data" | "account_metadata";
         /**
          * ProviderFeature
          * @enum {string}
          */
         ProviderFeature: "stateful_storage" | "file_upload" | "grounding" | "extended_cache" | "connectors" | "code_execution" | "workspace_indexing";
+        /** ProviderHandlingFact */
+        ProviderHandlingFact: {
+            data_type: components["schemas"]["ProviderDataType"];
+            /** Human Review Possible */
+            human_review_possible?: boolean | null;
+            /** Notes */
+            notes: string;
+            /** Retained */
+            retained: boolean;
+            /** Retention Days */
+            retention_days?: number | null;
+            /** Used For Training */
+            used_for_training: boolean;
+        };
+        /** ProviderProfile */
+        ProviderProfile: {
+            /** Contractual Controls */
+            contractual_controls?: string[];
+            /** Data Residency */
+            data_residency: string;
+            /** Evidence Urls */
+            evidence_urls: string[];
+            /** Handling */
+            handling: components["schemas"]["ProviderHandlingFact"][];
+            /** Incompatible Confidential Features */
+            incompatible_confidential_features?: components["schemas"]["ProviderFeature"][];
+            /** Inherent Features */
+            inherent_features?: components["schemas"]["ProviderFeature"][];
+            /** Maximum Retention Days */
+            maximum_retention_days?: number | null;
+            /** Plan */
+            plan: string;
+            /** Processor */
+            processor: string;
+            /** Product */
+            product: string;
+            /** Profile Id */
+            profile_id: string;
+            /** Prohibits Training */
+            prohibits_training: boolean;
+            /** Provider */
+            provider: string;
+            /**
+             * Reference Only
+             * @default false
+             */
+            reference_only: boolean;
+            /**
+             * Review Due
+             * Format: date
+             */
+            review_due: string;
+            /**
+             * Reviewed On
+             * Format: date
+             */
+            reviewed_on: string;
+            /** Supported Features */
+            supported_features?: components["schemas"]["ProviderFeature"][];
+            /** Surface */
+            surface: string;
+            /** Version */
+            version: string;
+            /**
+             * Zero Data Retention
+             * @default false
+             */
+            zero_data_retention: boolean;
+        };
+        /** ProviderVerificationIssue */
+        ProviderVerificationIssue: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            /** Profile Id */
+            profile_id: string;
+        };
+        /** ProviderVerificationResponse */
+        ProviderVerificationResponse: {
+            /** Issues */
+            issues: components["schemas"]["ProviderVerificationIssue"][];
+            /** Valid */
+            valid: boolean;
+        };
         /**
          * RecommendedAction
          * @enum {string}
@@ -452,6 +670,16 @@ export interface components {
          */
         Severity: "low" | "medium" | "high" | "critical";
         /**
+         * SourceSpan
+         * @description A content-free source offset range.
+         */
+        SourceSpan: {
+            /** End */
+            end: number;
+            /** Start */
+            start: number;
+        };
+        /**
          * TransferDirection
          * @enum {string}
          */
@@ -483,6 +711,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_detector_status_detectors_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetectorStatusResponse"];
+                };
+            };
+        };
+    };
     health_health_get: {
         parameters: {
             query?: never;
@@ -598,6 +846,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_providers_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderProfile"][];
+                };
+            };
+        };
+    };
+    get_provider_providers__profile_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderProfile"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    provider_attestation_status_providers_attestations_status_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttestationStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttestationStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_providers_providers_verify_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderVerificationResponse"];
                 };
             };
         };

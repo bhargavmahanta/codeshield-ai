@@ -3,12 +3,46 @@ name: CodeShield CI
 on:
   pull_request:
   push:
-    branches: [main, phase-3-review, phase-4-provider-policy, phase-5-evaluation-hardening]
+    branches: [main, phase-3-review, phase-4-provider-policy, phase-5-evaluation-hardening, phase-6-hardening]
 
 permissions:
   contents: read
 
 jobs:
+  contract-determinism:
+    name: contract-determinism (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install contract dependencies
+        run: |
+          python -m pip install -e ./engine
+          npm ci
+
+      - name: Build-tool unit tests
+        run: node --test scripts/build-tools.test.mjs
+
+      - name: Deterministic contract drift
+        env:
+          CODESHIELD_PYTHON: python
+        run: npm run check:contracts
+
   core:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -44,8 +78,8 @@ jobs:
         env:
           CODESHIELD_DATA_HOME: ${{ runner.temp }}/codeshield-datasets
         run: |
-          codeshield evaluate run --profile core --output "${{ runner.temp }}/core.json"
-          codeshield evaluate compare reports/phase5/core-baseline.json "${{ runner.temp }}/core.json"
+          codeshield evaluate run --suite phase6 --profile core --output "${{ runner.temp }}/core.json"
+          codeshield evaluate compare reports/phase6/core-baseline.json "${{ runner.temp }}/core.json"
 
       - name: Install npm workspaces
         run: npm ci
@@ -124,5 +158,57 @@ jobs:
           CODESHIELD_DATA_HOME: ${{ runner.temp }}/codeshield-datasets
         run: |
           gitleaks version
-          codeshield evaluate run --profile enhanced --output "${{ runner.temp }}/enhanced.json"
-          codeshield evaluate compare reports/phase5/core-baseline.json "${{ runner.temp }}/enhanced.json"
+          codeshield evaluate run --suite phase6 --profile enhanced --output "${{ runner.temp }}/enhanced.json"
+          codeshield evaluate compare reports/phase6/core-baseline.json "${{ runner.temp }}/enhanced.json"
+
+  windows-interoperability:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engine/pyproject.toml
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -e "./engine[dev,evaluation]"
+          npm ci
+
+      - name: Repeatable clean TypeScript build
+        run: |
+          npm run build
+          npm run build
+
+      - name: Contract drift without tracked writes
+        env:
+          CODESHIELD_PYTHON: python
+        run: npm run check:contracts
+
+      - name: TypeScript checks
+        run: |
+          npm run typecheck
+          npm test
+          npm run pack:check
+
+      - name: Phase 6 interoperability tests
+        run: >-
+          python -m pytest
+          engine/tests/test_fragment_detector.py
+          engine/tests/test_sarif.py
+          engine/tests/test_api.py
+
+      - name: Phase 6 core evaluation gates
+        env:
+          CODESHIELD_DATA_HOME: ${{ runner.temp }}/codeshield-datasets
+        run: |
+          codeshield evaluate run --suite phase6 --profile core --output "${{ runner.temp }}/core.json"
+          codeshield evaluate compare reports/phase6/core-baseline.json "${{ runner.temp }}/core.json"

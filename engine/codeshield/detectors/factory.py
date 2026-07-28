@@ -5,6 +5,7 @@ from __future__ import annotations
 from codeshield.detectors.base import SensitiveDataDetector
 from codeshield.detectors.entropy import EntropyDetector
 from codeshield.detectors.gitleaks import GitleaksDetector
+from codeshield.detectors.fragments import FragmentDetector
 from codeshield.detectors.presidio import PresidioDetector
 from codeshield.detectors.regex import RegexDetector
 from codeshield.models.config import DetectorConfig
@@ -17,8 +18,17 @@ def build_detectors(
     validate_optional: bool = True,
 ) -> list[SensitiveDataDetector]:
     settings = config or DetectorConfig()
+    base: list[SensitiveDataDetector] = [RegexDetector(), EntropyDetector()]
+    if settings.fragments.enabled:
+        base.insert(
+            1,
+            FragmentDetector(
+                max_fragments=settings.fragments.max_fragments,
+                max_reconstructed_length=settings.fragments.max_reconstructed_length,
+            ),
+        )
     if settings.profile is DetectorProfile.CORE:
-        return [RegexDetector(), EntropyDetector()]
+        return base
     presidio = PresidioDetector(
         language=settings.presidio.language,
         model=settings.presidio.model,
@@ -31,13 +41,19 @@ def build_detectors(
     if validate_optional:
         presidio.ensure_available()
         gitleaks.ensure_available()
-    return [RegexDetector(), EntropyDetector(), presidio, gitleaks]
+    return [*base, presidio, gitleaks]
 
 
 def detector_status(config: DetectorConfig | None = None) -> list[dict[str, object]]:
     settings = config or DetectorConfig()
     status: list[dict[str, object]] = [
         {"name": "regex", "enabled": True, "available": True, "error": None},
+        {
+            "name": "fragment",
+            "enabled": settings.fragments.enabled,
+            "available": True,
+            "error": None,
+        },
         {"name": "entropy", "enabled": True, "available": True, "error": None},
     ]
     optional = (

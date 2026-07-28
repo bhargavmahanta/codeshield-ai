@@ -7,6 +7,7 @@ import re
 from collections import Counter
 
 from codeshield.detectors.masking import mask_value
+from codeshield.models.context import FileContext
 from codeshield.models.enums import (
     DataCategory,
     DetectionSource,
@@ -26,7 +27,10 @@ class EntropyDetector:
             rf"(?<![A-Za-z0-9_])[A-Za-z0-9_+\-/=]{{{min_length},}}(?![A-Za-z0-9_])"
         )
 
-    def detect(self, text: str) -> list[Finding]:
+    def detect(
+        self, text: str, *, file_context: FileContext | None = None
+    ) -> list[Finding]:
+        del file_context
         findings: list[Finding] = []
         for match in self.token_pattern.finditer(text):
             token = match.group(0)
@@ -77,4 +81,3 @@ def _looks_like_placeholder(value: str) -> bool:
     if any(word in lowered for word in placeholder_words):
         return True
     return len(set(value)) <= 4
-

@@ -23,9 +23,26 @@ def generate_phase5(seed: int = 42) -> dict[str, list[EvaluationCase]]:
     }
 
 
+def generate_phase6(seed: int = 42) -> dict[str, list[EvaluationCase]]:
+    generated = generate_phase5(seed)
+    generated["fragment-synthetic"] = _fragment_cases(seed)
+    return generated
+
+
 def write_jsonl(path: Path, cases: Iterable[EvaluationCase]) -> str:
+    def safe_record(case: EvaluationCase) -> dict[str, object]:
+        record = case.model_dump(mode="json")
+        if record.get("file_path") is None:
+            record.pop("file_path", None)
+        return record
+
     payload = "".join(
-        json.dumps(case.model_dump(mode="json"), sort_keys=True, separators=(",", ":")) + "\n"
+        json.dumps(
+            safe_record(case),
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        + "\n"
         for case in cases
     )
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -113,6 +130,109 @@ def _secret_cases(seed: int) -> list[EvaluationCase]:
             "token = 'sk_' + 'live_51PhaseFiveSplitValue93628471'",
             [(DataCategory.API_KEY, "sk_' + 'live_51PhaseFiveSplitValue93628471")],
         )
+    )
+    return cases
+
+
+def _fragment_cases(seed: int) -> list[EvaluationCase]:
+    randomizer = random.Random(seed + 6)
+    suffix = "".join(
+        randomizer.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(18)
+    )
+    tail = f"live_51PhaseSix{suffix}"
+    positives = [
+        (
+            "fragment-python-plus",
+            f'token = "sk_" + "{tail}"',
+            ".py",
+            '"sk_" + "' + tail + '"',
+        ),
+        (
+            "fragment-python-adjacent",
+            f'token = ("sk_" "{tail}")',
+            ".py",
+            '"sk_" "' + tail + '"',
+        ),
+        (
+            "fragment-python-names",
+            f'left = "sk_"\nright = "{tail}"\ntoken = left + right',
+            ".py",
+            "left + right",
+        ),
+        (
+            "fragment-python-template",
+            f'right = "{tail}"\ntoken = f"sk_{{right}}"',
+            ".py",
+            'f"sk_{right}"',
+        ),
+        (
+            "fragment-typescript-plus",
+            f'const token = "sk_" + "{tail}";',
+            ".ts",
+            '"sk_" + "' + tail + '"',
+        ),
+        (
+            "fragment-typescript-names",
+            f'const left = "sk_";\nconst right = "{tail}";\n'
+            "const token = left + right;",
+            ".ts",
+            "left + right",
+        ),
+        (
+            "fragment-typescript-template",
+            f'const left = "sk_";\nconst right = "{tail}";\n'
+            "const token = `${left}${right}`;",
+            ".ts",
+            "`${left}${right}`",
+        ),
+        (
+            "fragment-json-parts",
+            f'{{"api_key_parts": ["sk_", "{tail}"]}}',
+            ".json",
+            f'["sk_", "{tail}"]',
+        ),
+    ]
+    cases: list[EvaluationCase] = []
+    for case_id, text, suffix_value, expression in positives:
+        start = text.index(expression)
+        cases.append(
+            EvaluationCase(
+                case_id=case_id,
+                suite="fragment-positive",
+                text=text,
+                expected=[
+                    ExpectedSpan(
+                        category=DataCategory.API_KEY,
+                        start=start,
+                        end=start + len(expression),
+                    )
+                ],
+                file_path=f"synthetic/example{suffix_value}",
+            )
+        )
+
+    negatives = [
+        (".py", 'token = load_prefix() + "synthetic"'),
+        (".py", 'token = config.prefix + "synthetic"'),
+        (".py", 'part = "sk_"\npart = user_input\ntoken = part + "live_value"'),
+        (".py", 'message = "ordinary" + "documentation"'),
+        (".ts", 'const token = getPrefix() + "synthetic";'),
+        (".ts", 'const token = config.prefix + "synthetic";'),
+        (".ts", '// const token = "sk_" + "live_51SyntheticCommentValue999";'),
+        (".ts", 'const message = "ordinary" + "documentation";'),
+        (".json", '{"ordinary_parts": ["sk_", "live_51SyntheticDecoyValue999"]}'),
+        (".json", '{"token_parts": ["short", "example"]}'),
+        (".txt", "The plus sign joins ideas in this documentation."),
+        (".txt", "No credential fragments are present."),
+    ]
+    cases.extend(
+        EvaluationCase(
+            case_id=f"fragment-negative-{index:02d}",
+            suite="fragment-negative",
+            text=text,
+            file_path=f"synthetic/negative-{index:02d}{suffix_value}",
+        )
+        for index, (suffix_value, text) in enumerate(negatives, start=1)
     )
     return cases
 

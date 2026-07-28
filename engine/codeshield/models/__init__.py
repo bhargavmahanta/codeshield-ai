@@ -3,6 +3,7 @@
 from codeshield.models.context import ContextAssessment, FileContext
 from codeshield.models.config import (
     DetectorConfig,
+    FragmentDetectorConfig,
     GitleaksDetectorConfig,
     PresidioDetectorConfig,
     RepositoryConfig,
@@ -26,7 +27,7 @@ from codeshield.models.enums import (
     Severity,
     TransferDirection,
 )
-from codeshield.models.finding import Finding
+from codeshield.models.finding import Finding, SourceSpan
 from codeshield.models.policy import (
     PolicyDecision,
     PolicyDocument,
@@ -65,6 +66,7 @@ __all__ = [
     "DetectorProfile",
     "FileContext",
     "Finding",
+    "FragmentDetectorConfig",
     "GitleaksDetectorConfig",
     "LlmAssessmentResult",
     "LlmPolicyRule",
@@ -97,5 +99,6 @@ __all__ = [
     "ScoringWeights",
     "Severity",
     "SkippedFile",
+    "SourceSpan",
     "TransferDirection",
 ]

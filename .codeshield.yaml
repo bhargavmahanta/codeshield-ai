@@ -4,6 +4,10 @@ policy_file: policies/default.yaml
 public_code_paths: []
 detectors:
   profile: core
+  fragments:
+    enabled: true
+    max_fragments: 8
+    max_reconstructed_length: 512
   presidio:
     language: en
     model: en_core_web_sm

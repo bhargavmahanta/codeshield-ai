@@ -1,0 +1,168 @@
+import assert from "node:assert/strict";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+
+import {
+  canonicalizeJson,
+  canonicalizeJsonFile,
+  canonicalizeText,
+  canonicalizeTextFile,
+  cleanBuildOutputs,
+  contractDriftDiagnostic,
+  safeReplace,
+  SafeFileError,
+} from "./lib/safe-files.mjs";
+
+
+function temporaryRepository() {
+  const root = mkdtempSync(path.join(os.tmpdir(), "codeshield-build-tools-"));
+  for (const workspace of ["shared", "cli", "sdk"]) {
+    mkdirSync(path.join(root, "packages", workspace, "dist"), { recursive: true });
+    mkdirSync(path.join(root, "packages", workspace, "src"), { recursive: true });
+    writeFileSync(
+      path.join(root, "packages", workspace, "dist", "generated.js"),
+      "generated",
+    );
+    writeFileSync(
+      path.join(root, "packages", workspace, "src", "index.ts"),
+      "source",
+    );
+  }
+  return root;
+}
+
+
+test("cleanBuildOutputs deletes only fixed dist directories", () => {
+  const root = temporaryRepository();
+  try {
+    cleanBuildOutputs(root);
+    for (const workspace of ["shared", "cli", "sdk"]) {
+      assert.equal(existsSync(path.join(root, "packages", workspace, "dist")), false);
+      assert.equal(
+        readFileSync(path.join(root, "packages", workspace, "src", "index.ts"), "utf8"),
+        "source",
+      );
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+
+test("safeReplace validates, replaces, and removes temporary files", () => {
+  const root = temporaryRepository();
+  const generated = path.join(root, "generated-openapi.json");
+  const destination = path.join(root, "packages", "shared", "openapi.json");
+  writeFileSync(generated, "new-contract");
+  writeFileSync(destination, "old-contract");
+  try {
+    safeReplace(generated, "packages/shared/openapi.json", root);
+    assert.equal(readFileSync(destination, "utf8"), "new-contract");
+    assert.equal(
+      existsSync(path.join(root, "packages", "shared", ".openapi.json.tmp")),
+      false,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+
+test("safeReplace rejects unknown output targets", () => {
+  const root = temporaryRepository();
+  try {
+    assert.throws(
+      () => safeReplace("source", "engine/codeshield/version.py", root),
+      SafeFileError,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+
+test("canonical text removes BOM, normalizes line endings, and trims whitespace", () => {
+  assert.equal(
+    canonicalizeText("\uFEFFfirst  \r\nsecond\t\rthird\n\n"),
+    "first\nsecond\nthird\n",
+  );
+  assert.equal(canonicalizeText("single line"), "single line\n");
+});
+
+
+test("canonical text files produce identical bytes from LF and CRLF input", () => {
+  const root = temporaryRepository();
+  const left = path.join(root, "left.ts");
+  const right = path.join(root, "right.ts");
+  try {
+    writeFileSync(left, "\uFEFFexport type A = string;  \r\n\r\n");
+    writeFileSync(right, "export type A = string;\n");
+    canonicalizeTextFile(left);
+    canonicalizeTextFile(right);
+    assert.deepEqual(readFileSync(left), readFileSync(right));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+
+test("canonical JSON recursively sorts objects while preserving array order", () => {
+  assert.deepEqual(
+    canonicalizeJson({
+      zebra: { beta: 2, alpha: 1 },
+      array: [{ delta: 4, charlie: 3 }, "first", "second"],
+      alpha: true,
+    }),
+    {
+      alpha: true,
+      array: [{ charlie: 3, delta: 4 }, "first", "second"],
+      zebra: { alpha: 1, beta: 2 },
+    },
+  );
+
+  const root = temporaryRepository();
+  const file = path.join(root, "openapi.json");
+  try {
+    writeFileSync(file, "\uFEFF{\"z\":1,\"a\":{\"y\":2,\"x\":3}}\r\n");
+    canonicalizeJsonFile(file);
+    assert.equal(
+      readFileSync(file, "utf8"),
+      '{\n  "a": {\n    "x": 3,\n    "y": 2\n  },\n  "z": 1\n}\n',
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+
+test("contract drift diagnostics are deterministic and content-free", () => {
+  const root = temporaryRepository();
+  const tracked = path.join(root, "tracked.ts");
+  const generated = path.join(root, "generated.ts");
+  const prohibited = "SyntheticSecretMustNeverAppear";
+  try {
+    writeFileSync(tracked, `export type Value = "${prohibited}";\n`);
+    writeFileSync(generated, `export type Value = "replacement";\r\n`);
+    const first = contractDriftDiagnostic(
+      generated,
+      tracked,
+      "packages/shared/src/generated.ts",
+    );
+    const second = contractDriftDiagnostic(
+      generated,
+      tracked,
+      "packages/shared/src/generated.ts",
+    );
+
+    assert.equal(first, second);
+    assert.match(first, /tracked bytes=\d+, sha256=[a-f0-9]{64}, eol=lf/u);
+    assert.match(first, /generated bytes=\d+, sha256=[a-f0-9]{64}, eol=crlf/u);
+    assert.match(first, /first differing line=1/u);
+    assert.equal(first.includes(prohibited), false);
+    assert.equal(first.includes(root), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

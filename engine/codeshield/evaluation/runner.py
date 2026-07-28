@@ -15,10 +15,21 @@ from typing import Any
 import yaml
 
 from codeshield.classifier import evaluate_context_classifier
-from codeshield.evaluation.datasets import generate_phase5, read_jsonl, write_jsonl
+from codeshield.evaluation.datasets import (
+    generate_phase5,
+    generate_phase6,
+    read_jsonl,
+    write_jsonl,
+)
 from codeshield.evaluation.metrics import detection_metrics, latency_metrics
 from codeshield.models.config import DetectorConfig
-from codeshield.models.enums import DetectorProfile, Destination, RecommendedAction
+from codeshield.models.context import FileContext
+from codeshield.models.enums import (
+    DetectionSource,
+    DetectorProfile,
+    Destination,
+    RecommendedAction,
+)
 from codeshield.models.enums import ProtectionMode, SegmentKind, SegmentProvenance
 from codeshield.models.llm import ContentSegment, LlmPreflightRequest
 from codeshield.llm import LlmPreflightService, SegmentClassifier
@@ -37,25 +48,31 @@ def data_home() -> Path:
     return Path(configured).expanduser() if configured else Path.home() / ".codeshield" / "datasets"
 
 
-def load_manifest() -> dict[str, Any]:
-    path = Path(str(files("codeshield.evaluation").joinpath("manifest.yaml")))
+def load_manifest(suite: str = "phase5") -> dict[str, Any]:
+    filenames = {
+        "phase5": "manifest.yaml",
+        "phase6": "manifest_phase6.yaml",
+    }
+    filename = filenames.get(suite)
+    if filename is None:
+        raise EvaluationError("unknown evaluation suite")
+    path = Path(str(files("codeshield.evaluation").joinpath(filename)))
     payload = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict) or payload.get("suite") != "phase5":
-        raise EvaluationError("Phase 5 dataset manifest is invalid")
+    if not isinstance(payload, dict) or payload.get("suite") != suite:
+        raise EvaluationError("evaluation dataset manifest is invalid")
     return payload
 
 
 def prepare_suite(*, suite: str = "phase5", root: Path | None = None) -> dict[str, object]:
-    if suite != "phase5":
-        raise EvaluationError("unknown evaluation suite")
-    manifest = load_manifest()
+    manifest = load_manifest(suite)
     _validate_dataset_runtime(manifest)
     target = (root or data_home()) / suite / str(manifest["version"])
     try:
-        generated = generate_phase5(seed=int(manifest["seed"]))
+        generator = generate_phase6 if suite == "phase6" else generate_phase5
+        generated = generator(seed=int(manifest["seed"]))
     except ImportError as exc:
         raise EvaluationError(
-            "install codeshield-engine[evaluation] to prepare Phase 5 data"
+            "install codeshield-engine[evaluation] to prepare evaluation data"
         ) from exc
     digests: dict[str, str] = {}
     counts: dict[str, int] = {}
@@ -101,10 +118,10 @@ def _validate_dataset_runtime(manifest: dict[str, Any]) -> None:
         faker_version = importlib.metadata.version("Faker")
     except importlib.metadata.PackageNotFoundError as exc:
         raise EvaluationError(
-            "install codeshield-engine[evaluation] to prepare Phase 5 data"
+            "install codeshield-engine[evaluation] to prepare evaluation data"
         ) from exc
     if installed != "0.2.5" or faker_version != "40.31.0":
-        raise EvaluationError("Phase 5 data generator versions do not match the manifest")
+        raise EvaluationError("evaluation data generator versions do not match the manifest")
 
 
 def run_evaluation(
@@ -112,10 +129,11 @@ def run_evaluation(
     profile: DetectorProfile,
     output: Path,
     root: Path | None = None,
+    suite: str = "phase5",
 ) -> dict[str, Any]:
-    inventory = prepare_suite(root=root)
+    inventory = prepare_suite(suite=suite, root=root)
     dataset_root = Path(str(inventory["directory"]))
-    manifest = load_manifest()
+    manifest = load_manifest(suite)
     cases = {
         str(entry["id"]): read_jsonl(dataset_root / str(entry["file"]))
         for entry in manifest["datasets"]
@@ -130,12 +148,18 @@ def run_evaluation(
         return scanner.scan_text(
             case.text,
             destination=case.destination,
+            file_context=FileContext.from_path(
+                Path(case.file_path) if case.file_path else None
+            ),
         )
 
     def scan_core(case: object) -> list[object]:
         return core_scanner.scan_text(
             case.text,
             destination=case.destination,
+            file_context=FileContext.from_path(
+                Path(case.file_path) if case.file_path else None
+            ),
         )
 
     synthetic_cases = cases["codeshield-synthetic"]
@@ -146,6 +170,18 @@ def run_evaluation(
     pii = detection_metrics(cases["presidio-research-synthetic"], scan)
     all_detection = detection_metrics(
         synthetic_cases + cases["presidio-research-synthetic"], scan
+    )
+    def scan_fragments(case: object) -> list[object]:
+        return [
+            finding
+            for finding in scan(case)
+            if finding.detection_source is DetectionSource.FRAGMENT
+        ]
+
+    fragments = (
+        detection_metrics(cases["fragment-synthetic"], scan_fragments)
+        if "fragment-synthetic" in cases
+        else None
     )
     workflow = _workflow_metrics(scanner, cases["workflow-synthetic"])
     workflow.update(_protection_metrics(scanner))
@@ -159,7 +195,7 @@ def run_evaluation(
         "schema_version": 1,
         "codeshield_version": __version__,
         "profile": profile.value,
-        "suite": "phase5",
+        "suite": suite,
         "suite_version": manifest["version"],
         "seed": manifest["seed"],
         "dataset_hashes": inventory["datasets"],
@@ -173,6 +209,7 @@ def run_evaluation(
             "adversarial": adversarial,
             "pii": pii,
             "all_detection": all_detection,
+            **({"fragments": fragments} if fragments is not None else {}),
             "context": context,
             "workflow": workflow,
             "latency": latency,
@@ -356,7 +393,7 @@ def _gates(report: dict[str, Any]) -> dict[str, bool]:
     metrics = report["metrics"]
     latency = metrics["latency"]["100000"]["warm_p95_ms"]
     profile = report["profile"]
-    return {
+    gates = {
         "mandatory_blocking": metrics["workflow"]["restricted_and_mandatory_block_rate"] == 1.0,
         "restricted_transfer_blocking": metrics["workflow"]["restricted_transfer_blocking"] == 1.0,
         "privileged_injection_blocking": metrics["workflow"]["privileged_injection_blocking"] == 1.0,
@@ -368,6 +405,12 @@ def _gates(report: dict[str, Any]) -> dict[str, bool]:
         "context_macro_f1": metrics["context"]["macro_f1"] >= 0.90,
         "latency": latency <= (3000 if profile == "enhanced" else 250),
     }
+    if "fragments" in metrics:
+        gates["fragment_recall"] = metrics["fragments"]["exact"]["recall"] == 1.0
+        gates["fragment_false_positive_rate"] = (
+            metrics["fragments"]["negative_case_false_positive_rate"] <= 0.02
+        )
+    return gates
 
 
 def _assert_safe_report(report: dict[str, Any]) -> None:
@@ -380,6 +423,13 @@ def _assert_safe_report(report: dict[str, Any]) -> None:
 def _markdown(report: dict[str, Any]) -> str:
     metrics = report["metrics"]
     exact = metrics["all_detection"]["exact"]
+    fragment_lines = ""
+    if "fragments" in metrics:
+        fragment_lines = (
+            f"- Fragment exact recall: `{metrics['fragments']['exact']['recall']}`\n"
+            f"- Fragment negative-case false-positive rate: "
+            f"`{metrics['fragments']['negative_case_false_positive_rate']}`\n"
+        )
     return (
         f"# CodeShield {report['codeshield_version']} Evaluation\n\n"
         f"- Profile: `{report['profile']}`\n"
@@ -391,6 +441,7 @@ def _markdown(report: dict[str, Any]) -> str:
         f"- Core negative-case false-positive rate: "
         f"`{metrics['core_synthetic']['negative_case_false_positive_rate']}`\n"
         f"- Policy action accuracy: `{metrics['workflow']['policy_action_accuracy']}`\n"
+        f"{fragment_lines}"
         f"- 100 KB warm p95: `{metrics['latency']['100000']['warm_p95_ms']} ms`\n\n"
         "This aggregate report contains no input text, findings, previews, or paths.\n"
     )

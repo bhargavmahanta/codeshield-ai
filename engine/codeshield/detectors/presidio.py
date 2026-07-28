@@ -8,6 +8,7 @@ from typing import Any
 
 from codeshield.detectors.errors import DetectorExecutionError, DetectorUnavailableError
 from codeshield.detectors.masking import mask_value
+from codeshield.models.context import FileContext
 from codeshield.models.enums import DataCategory, DetectionSource, RecommendedAction, Severity
 from codeshield.models.finding import Finding, build_finding_id
 
@@ -61,7 +62,10 @@ class PresidioDetector:
     def ensure_available(self) -> None:
         self._load()
 
-    def detect(self, text: str) -> list[Finding]:
+    def detect(
+        self, text: str, *, file_context: FileContext | None = None
+    ) -> list[Finding]:
+        del file_context
         spans = _candidate_spans(text) if self._prefilter else [(0, len(text))]
         if not spans:
             return []
