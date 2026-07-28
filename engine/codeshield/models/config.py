@@ -6,9 +6,9 @@ from enum import StrEnum
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
-from codeshield.models.enums import Destination
+from codeshield.models.enums import Destination, DetectorProfile
 
 
 class RepositoryConfigError(ValueError):
@@ -26,13 +26,43 @@ class RepositoryVisibility(StrEnum):
         return Destination.PRIVATE_GIT
 
 
+class PresidioDetectorConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    language: str = Field(default="en", pattern=r"^[a-z]{2}$")
+    model: str = Field(default="en_core_web_sm", min_length=1, max_length=128)
+    score_threshold: float = Field(default=0.55, ge=0.0, le=1.0)
+
+
+class GitleaksDetectorConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    executable: str = Field(default="gitleaks", min_length=1, max_length=512)
+    timeout_seconds: float = Field(default=5.0, gt=0.0, le=120.0)
+
+
+class DetectorConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    profile: DetectorProfile = DetectorProfile.CORE
+    presidio: PresidioDetectorConfig = Field(default_factory=PresidioDetectorConfig)
+    gitleaks: GitleaksDetectorConfig = Field(default_factory=GitleaksDetectorConfig)
+
+
 class RepositoryConfig(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    schema_version: int = Field(default=1, ge=1, le=1)
+    schema_version: int = Field(default=1, ge=1, le=2)
     repository_visibility: RepositoryVisibility
     policy_file: Path = Path("policies/default.yaml")
     public_code_paths: list[str] = Field(default_factory=list)
+    detectors: DetectorConfig = Field(default_factory=DetectorConfig)
+
+    @model_validator(mode="after")
+    def version_one_uses_core_detectors(self) -> "RepositoryConfig":
+        if self.schema_version == 1 and self.detectors.profile is not DetectorProfile.CORE:
+            raise ValueError("schema version 1 supports only the core detector profile")
+        return self
 
     @field_validator("policy_file")
     @classmethod
@@ -71,3 +101,14 @@ def resolve_policy_path(root: Path, config: RepositoryConfig) -> Path:
     if not candidate.is_relative_to(resolved_root):
         raise RepositoryConfigError("configured policy path escapes repository root")
     return candidate
+
+
+def find_repository_config(start: Path | None = None) -> tuple[Path, RepositoryConfig] | None:
+    current = (start or Path.cwd()).resolve()
+    if current.is_file():
+        current = current.parent
+    for root in (current, *current.parents):
+        config = load_repository_config(root)
+        if config is not None:
+            return root, config
+    return None

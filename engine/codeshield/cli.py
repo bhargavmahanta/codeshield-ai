@@ -20,12 +20,15 @@ from codeshield.git import (
     StagedGitScanner,
 )
 from codeshield.models.config import (
+    DetectorConfig,
     RepositoryConfigError,
+    find_repository_config,
     load_repository_config,
     resolve_policy_path,
 )
 from codeshield.models.enums import Destination, RecommendedAction
 from codeshield.models.enums import (
+    DetectorProfile,
     ProtectionMode,
     ProviderFeature,
     SegmentKind,
@@ -44,7 +47,9 @@ from codeshield.pseudonymization import (
     VaultError,
 )
 from codeshield.scanner import DEFAULT_MAX_FILE_SIZE, CodeShieldScanner, ScanTimeoutError
+from codeshield.detectors import DetectorError, detector_status
 from codeshield.version import __version__
+from codeshield.evaluation import EvaluationError, compare_reports, prepare_suite, run_evaluation
 
 
 class OutputFormat(StrEnum):
@@ -60,9 +65,13 @@ app = typer.Typer(
 policy_app = typer.Typer(help="Validate and inspect destination policy files.")
 provider_app = typer.Typer(help="Inspect provider evidence and local attestations.")
 prompt_app = typer.Typer(help="Assess or protect prompts without sending them.")
+detector_app = typer.Typer(help="Inspect local detector profile availability.")
+evaluate_app = typer.Typer(help="Prepare and run reproducible local evaluations.")
 app.add_typer(policy_app, name="policy")
 app.add_typer(provider_app, name="provider")
 app.add_typer(prompt_app, name="prompt")
+app.add_typer(detector_app, name="detector")
+app.add_typer(evaluate_app, name="evaluate")
 
 
 @app.command()
@@ -125,7 +134,11 @@ def scan(
             assert path is not None
             if not path.exists():
                 raise OSError(f"scan path does not exist: {path}")
-            scanner = _scanner(policy)
+            config_entry = find_repository_config(path)
+            config = config_entry[1] if config_entry else None
+            if policy is None and config_entry:
+                policy = resolve_policy_path(config_entry[0], config_entry[1])
+            scanner = _scanner(policy, config.detectors if config else None)
             result = scanner.scan_path(
                 path,
                 destination=destination or Destination.LOCAL_FILE,
@@ -141,6 +154,7 @@ def scan(
         GitIntegrationError,
         PolicyLoadError,
         RepositoryConfigError,
+        DetectorError,
     ) as exc:
         typer.echo(f"CodeShield configuration/execution error: {exc}", err=True)
         raise typer.Exit(3) from exc
@@ -190,6 +204,7 @@ def check_staged(
         PolicyLoadError,
         RepositoryConfigError,
         ScanTimeoutError,
+        DetectorError,
     ) as exc:
         typer.echo(f"CodeShield configuration/execution error: {exc}", err=True)
         raise typer.Exit(3) from exc
@@ -278,7 +293,11 @@ def protect(
     vault: PseudonymVault | None = None
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
-        scanner = _scanner(policy)
+        config_entry = find_repository_config(path)
+        config = config_entry[1] if config_entry else None
+        if policy is None and config_entry:
+            policy = resolve_policy_path(config_entry[0], config_entry[1])
+        scanner = _scanner(policy, config.detectors if config else None)
         if mode is ProtectionMode.PSEUDONYMIZE:
             vault = PseudonymVault(vault_path, EnvironmentKeyProvider())
         result = scanner.protect_text(
@@ -303,7 +322,7 @@ def protect(
             typer.echo(f"Protected output written to {output}")
     except typer.Exit:
         raise
-    except (OSError, PolicyLoadError, ProtectionError, VaultError) as exc:
+    except (OSError, PolicyLoadError, ProtectionError, VaultError, DetectorError) as exc:
         typer.echo(f"CodeShield configuration/execution error: {exc}", err=True)
         raise typer.Exit(3) from exc
     finally:
@@ -442,6 +461,25 @@ def provider_verify() -> None:
     typer.echo("Provider profiles are current and internally consistent.")
 
 
+@detector_app.command("status")
+def show_detector_status(
+    repository: Annotated[Path, typer.Option("--repository")] = Path("."),
+) -> None:
+    """Show configured, enabled, and locally available detector adapters."""
+
+    try:
+        config_entry = find_repository_config(repository)
+        settings = config_entry[1].detectors if config_entry else DetectorConfig()
+        typer.echo(
+            json.dumps(
+                {"profile": settings.profile.value, "detectors": detector_status(settings)},
+                indent=2,
+            )
+        )
+    except (OSError, RepositoryConfigError) as exc:
+        _configuration_error(exc)
+
+
 @prompt_app.command("assess")
 def prompt_assess(
     provider: Annotated[str, typer.Option("--provider")],
@@ -550,6 +588,58 @@ def evaluate_context(
     typer.echo(json.dumps(evaluate_context_classifier(seed=seed), indent=2))
 
 
+@evaluate_app.command("prepare")
+def evaluate_prepare(
+    suite: Annotated[str, typer.Option("--suite")] = "phase5",
+) -> None:
+    """Prepare deterministic evaluation data outside the repository."""
+
+    try:
+        typer.echo(json.dumps(prepare_suite(suite=suite), indent=2))
+    except EvaluationError as exc:
+        _configuration_error(exc)
+
+
+@evaluate_app.command("run")
+def evaluate_run(
+    profile: Annotated[DetectorProfile, typer.Option("--profile")],
+    output: Annotated[Path, typer.Option("--output")],
+) -> None:
+    """Run a profile evaluation and write safe JSON and Markdown reports."""
+
+    try:
+        report = run_evaluation(profile=profile, output=output)
+    except (EvaluationError, DetectorError, OSError) as exc:
+        _configuration_error(exc)
+    typer.echo(
+        json.dumps(
+            {
+                "profile": report["profile"],
+                "suite_version": report["suite_version"],
+                "output": str(output),
+                "markdown": str(output.with_suffix(".md")),
+            },
+            indent=2,
+        )
+    )
+
+
+@evaluate_app.command("compare")
+def evaluate_compare(
+    baseline: Annotated[Path, typer.Argument(exists=True, readable=True)],
+    candidate: Annotated[Path, typer.Argument(exists=True, readable=True)],
+) -> None:
+    """Compare aggregate reports and fail on metric or security regressions."""
+
+    try:
+        result = compare_reports(baseline, candidate)
+    except EvaluationError as exc:
+        _configuration_error(exc)
+    typer.echo(json.dumps(result, indent=2))
+    if not result["passed"]:
+        raise typer.Exit(2)
+
+
 def _print_human_result(result: object) -> None:
     findings = result.findings
     typer.echo(
@@ -631,7 +721,7 @@ def _scan_staged(
     repository_visibility = (
         config.repository_visibility.value if config is not None else None
     )
-    return StagedGitScanner(_scanner(policy)).scan(
+    return StagedGitScanner(_scanner(policy, config.detectors if config else None)).scan(
         git_repository,
         destination=destination,
         excludes=excludes,
@@ -644,9 +734,12 @@ def _hook_manager(repository: Path) -> HookManager:
     return HookManager(GitRepository.discover(repository))
 
 
-def _scanner(policy_path: Path | None) -> CodeShieldScanner:
+def _scanner(
+    policy_path: Path | None,
+    detector_config: DetectorConfig | None = None,
+) -> CodeShieldScanner:
     policy_engine = PolicyEngine.from_path(policy_path)
-    return CodeShieldScanner(policy_engine=policy_engine)
+    return CodeShieldScanner(policy_engine=policy_engine, detector_config=detector_config)
 
 
 def _prompt_request(

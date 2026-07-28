@@ -1,0 +1,459 @@
+{
+  "adapters": {
+    "en-core-web-sm": "3.8.0",
+    "gitleaks": "8.30.1",
+    "presidio-analyzer": "2.2.363",
+    "spacy": "3.8.13"
+  },
+  "codeshield_version": "0.5.0",
+  "configuration_hash": "4780dc7e0e1079a4314e0009276edd8d8e4f602060202689deef139fa2b52ba0",
+  "dataset_hashes": {
+    "codeshield-synthetic": "33c7d5b7120b4292ef7d1872f6aa1a0652398b583785f6bd3e23d4b15f75ecbb",
+    "presidio-research-synthetic": "b25f8eb3ea74b841e1176a5836ff402d7b0201457fde5501fe3239be639c0035",
+    "workflow-synthetic": "d72834667a6b10f41e9222e16a0f9b558dd4829efc13a69c1b566d167754ed94"
+  },
+  "metrics": {
+    "adversarial": {
+      "by_category": {
+        "API_KEY": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 1,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 0.0,
+          "true_positive": 0
+        },
+        "UNKNOWN_SECRET": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 0,
+          "false_positive": 1,
+          "precision": 0.0,
+          "recall": 1.0,
+          "true_positive": 0
+        }
+      },
+      "by_detector": {
+        "entropy": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 0,
+          "false_positive": 1,
+          "precision": 0.0,
+          "recall": 1.0,
+          "true_positive": 0
+        }
+      },
+      "case_count": 1,
+      "exact": {
+        "f1": 0.0,
+        "f2": 0.0,
+        "false_negative": 1,
+        "false_positive": 1,
+        "precision": 0.0,
+        "recall": 0.0,
+        "true_positive": 0
+      },
+      "negative_case_count": 0,
+      "negative_case_false_positive_rate": 0.0,
+      "relaxed_overlap": {
+        "f1": 0.0,
+        "f2": 0.0,
+        "false_negative": 1,
+        "false_positive": 1,
+        "precision": 0.0,
+        "recall": 0.0,
+        "true_positive": 0
+      },
+      "strict_macro_f2": 0.0
+    },
+    "all_detection": {
+      "by_category": {
+        "API_KEY": {
+          "f1": 0.8889,
+          "f2": 0.8333,
+          "false_negative": 1,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 0.8,
+          "true_positive": 4
+        },
+        "DATABASE_CONNECTION_STRING": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "EMAIL": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "JWT": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "LOCATION": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 12,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 0.0,
+          "true_positive": 0
+        },
+        "PASSWORD": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "PERSON": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 4,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 0.0,
+          "true_positive": 0
+        },
+        "PHONE_NUMBER": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "UNKNOWN_SECRET": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 0,
+          "false_positive": 1,
+          "precision": 0.0,
+          "recall": 1.0,
+          "true_positive": 0
+        }
+      },
+      "by_detector": {
+        "entropy": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 0,
+          "false_positive": 1,
+          "precision": 0.0,
+          "recall": 1.0,
+          "true_positive": 0
+        },
+        "regex": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 9
+        }
+      },
+      "case_count": 34,
+      "exact": {
+        "f1": 0.5,
+        "f2": 0.3947,
+        "false_negative": 17,
+        "false_positive": 1,
+        "precision": 0.9,
+        "recall": 0.3462,
+        "true_positive": 9
+      },
+      "negative_case_count": 8,
+      "negative_case_false_positive_rate": 0.0,
+      "relaxed_overlap": {
+        "f1": 0.5,
+        "f2": 0.3947,
+        "false_negative": 17,
+        "false_positive": 1,
+        "precision": 0.9,
+        "recall": 0.3462,
+        "true_positive": 9
+      },
+      "strict_macro_f2": 0.6481
+    },
+    "context": {
+      "accuracy": 0.9881,
+      "confusion_matrix": [
+        [
+          12,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          12,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          12,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          12,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          12,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          12,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          11
+        ]
+      ],
+      "dataset": "synthetic",
+      "labels": [
+        "confidential_business_data",
+        "personal_data",
+        "placeholder",
+        "probable_real_secret",
+        "public_information",
+        "test_data",
+        "uncertain"
+      ],
+      "macro_f1": 0.9881,
+      "macro_precision": 0.989,
+      "macro_recall": 0.9881,
+      "seed": 42,
+      "test_records": 84,
+      "training_records": 196
+    },
+    "core_synthetic": {
+      "by_category": {
+        "API_KEY": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 4
+        },
+        "DATABASE_CONNECTION_STRING": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "EMAIL": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "JWT": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "PASSWORD": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        },
+        "PHONE_NUMBER": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 1
+        }
+      },
+      "by_detector": {
+        "regex": {
+          "f1": 1.0,
+          "f2": 1.0,
+          "false_negative": 0,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "true_positive": 9
+        }
+      },
+      "case_count": 17,
+      "exact": {
+        "f1": 1.0,
+        "f2": 1.0,
+        "false_negative": 0,
+        "false_positive": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "true_positive": 9
+      },
+      "negative_case_count": 8,
+      "negative_case_false_positive_rate": 0.0,
+      "relaxed_overlap": {
+        "f1": 1.0,
+        "f2": 1.0,
+        "false_negative": 0,
+        "false_positive": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "true_positive": 9
+      },
+      "strict_macro_f2": 1.0
+    },
+    "latency": {
+      "1000": {
+        "cold_ms": 146.23,
+        "warm_median_ms": 0.65,
+        "warm_p95_ms": 0.96,
+        "warm_p99_ms": 0.96
+      },
+      "10000": {
+        "cold_ms": 176.67,
+        "warm_median_ms": 6.29,
+        "warm_p95_ms": 8.43,
+        "warm_p99_ms": 8.43
+      },
+      "100000": {
+        "cold_ms": 231.22,
+        "warm_median_ms": 65.83,
+        "warm_p95_ms": 70.37,
+        "warm_p99_ms": 70.37
+      }
+    },
+    "pii": {
+      "by_category": {
+        "LOCATION": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 12,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 0.0,
+          "true_positive": 0
+        },
+        "PERSON": {
+          "f1": 0.0,
+          "f2": 0.0,
+          "false_negative": 4,
+          "false_positive": 0,
+          "precision": 1.0,
+          "recall": 0.0,
+          "true_positive": 0
+        }
+      },
+      "by_detector": {},
+      "case_count": 16,
+      "exact": {
+        "f1": 0.0,
+        "f2": 0.0,
+        "false_negative": 16,
+        "false_positive": 0,
+        "precision": 1.0,
+        "recall": 0.0,
+        "true_positive": 0
+      },
+      "negative_case_count": 0,
+      "negative_case_false_positive_rate": 0.0,
+      "relaxed_overlap": {
+        "f1": 0.0,
+        "f2": 0.0,
+        "false_negative": 16,
+        "false_positive": 0,
+        "precision": 1.0,
+        "recall": 0.0,
+        "true_positive": 0
+      },
+      "strict_macro_f2": 0.0
+    },
+    "workflow": {
+      "case_count": 3,
+      "policy_action_accuracy": 1.0,
+      "privileged_injection_blocking": 1.0,
+      "pseudonym_consistency": 1.0,
+      "restoration_accuracy": 1.0,
+      "restricted_and_mandatory_block_rate": 1.0,
+      "restricted_transfer_blocking": 1.0,
+      "transformation_safety": 1.0
+    }
+  },
+  "platform": {
+    "python": "3.12.10",
+    "system": "Windows"
+  },
+  "profile": "core",
+  "reproducibility_digest": "66aa85d5011477ba6910b82642f6287a4e09f9074be6ef2fe164808e7b2eeadb",
+  "schema_version": 1,
+  "seed": 42,
+  "suite": "phase5",
+  "suite_version": "1.0.0"
+}

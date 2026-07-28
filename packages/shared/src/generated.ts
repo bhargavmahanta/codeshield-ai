@@ -194,7 +194,7 @@ export interface components {
          * DetectionSource
          * @enum {string}
          */
-        DetectionSource: "regex" | "entropy";
+        DetectionSource: "regex" | "entropy" | "presidio" | "gitleaks";
         /**
          * Finding
          * @description A masked sensitive-data finding.

@@ -7,4 +7,13 @@ services:
       - "127.0.0.1:8765:8765"
     environment:
       CODESHIELD_ENV: local
-
+  evaluation:
+    profiles: ["evaluation"]
+    build:
+      context: ./engine
+      dockerfile: Dockerfile.evaluation
+    command: ["codeshield", "evaluate", "run", "--profile", "enhanced", "--output", "/reports/enhanced.json"]
+    environment:
+      CODESHIELD_DATA_HOME: /data
+    volumes:
+      - ./reports/phase5:/reports

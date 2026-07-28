@@ -1,4 +1,13 @@
-schema_version: 1
+schema_version: 2
 repository_visibility: private
 policy_file: policies/default.yaml
 public_code_paths: []
+detectors:
+  profile: core
+  presidio:
+    language: en
+    model: en_core_web_sm
+    score_threshold: 0.55
+  gitleaks:
+    executable: gitleaks
+    timeout_seconds: 5.0
