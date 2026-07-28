@@ -140,19 +140,25 @@ fixture classification, provider evidence validation, and an isolated-index
 staged scan. The final local results were:
 
 - Python: `138 passed`.
-- TypeScript packages: `10 passed`; Node build tooling: `3 passed`.
+- TypeScript packages: `10 passed`; Node build tooling: `7 passed`.
 - Core and enhanced Phase 6 evaluation comparisons: passed all gates.
 - Contract drift, package contents, fixture checks, and provider checks:
   passed.
+- Contract determinism passed on Ubuntu and Windows with Node.js 20 and 22.
 
-Review found and corrected one Windows-specific issue before sign-off:
-`fsync` must use a writable file descriptor on Windows. No release, push,
-deployment, SARIF upload, or external write was performed.
+Review found and corrected Windows-specific replacement and contract
+canonicalization issues before sign-off. The remediation normalizes BOMs,
+line endings, trailing whitespace, JSON key order, and generated TypeScript
+key order before strict byte comparison. No release, deployment, package
+publication, or SARIF upload was performed.
 
 ## Security Review and Limitations
 
 - SARIF tests use synthetic credentials and assert that raw values, previews,
   absolute paths, and temporary content do not escape.
+- Three GitGuardian alerts caused by direct Stripe-shaped test literals were
+  replaced with runtime-generated synthetic credentials and classified as
+  ignored test credentials; repository scanning remains fully enabled.
 - All CodeShield child processes use argument arrays with shell execution
   disabled.
 - Static reconstruction is deliberately incomplete and may miss obfuscated,
