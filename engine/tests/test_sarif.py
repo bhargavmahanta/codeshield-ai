@@ -18,7 +18,7 @@ runner = CliRunner()
 
 
 def test_sarif_is_deterministic_valid_and_leakage_safe(tmp_path: Path) -> None:
-    raw = "sk_live_51SyntheticSarifValue93628471"
+    raw = synthetic_api_key()
     target = tmp_path / "src" / "settings.py"
     target.parent.mkdir()
     target.write_text(f'api_key = "{raw}"\n', encoding="utf-8")
@@ -69,7 +69,7 @@ def test_sarif_multiline_region_has_accurate_end(tmp_path: Path) -> None:
 
 
 def test_sarif_rejects_location_outside_source_root(tmp_path: Path) -> None:
-    raw = "sk_live_51SyntheticOutsideValue93628471"
+    raw = synthetic_api_key()
     target = tmp_path / "outside.py"
     target.write_text(raw, encoding="utf-8")
     scan = CodeShieldScanner().scan_path(
@@ -81,7 +81,7 @@ def test_sarif_rejects_location_outside_source_root(tmp_path: Path) -> None:
 
 
 def test_cli_writes_sarif_and_preserves_exit_code(tmp_path: Path) -> None:
-    raw = "sk_live_51SyntheticCliSarifValue93628471"
+    raw = synthetic_api_key()
     target = tmp_path / "settings.py"
     output = tmp_path / "reports" / "result.sarif"
     target.write_text(f'api_key = "{raw}"\n', encoding="utf-8")

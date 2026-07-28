@@ -112,6 +112,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/providers/{profile_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Provider */
+        get: operations["get_provider_providers__profile_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/providers/attestations/status": {
         parameters: {
             query?: never;
@@ -138,23 +155,6 @@ export interface paths {
         };
         /** Verify Providers */
         get: operations["verify_providers_providers_verify_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/providers/{profile_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Provider */
-        get: operations["get_provider_providers__profile_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -359,11 +359,6 @@ export interface components {
             /** Start */
             start: number;
         };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
-        };
         /** HealthResponse */
         HealthResponse: {
             /** Local Only */
@@ -372,6 +367,11 @@ export interface components {
             service: string;
             /** Status */
             status: string;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
         };
         /** LlmAssessmentResult */
         LlmAssessmentResult: {
@@ -449,20 +449,6 @@ export interface components {
              */
             rationale: string;
         };
-        /** ProtectTextRequest */
-        ProtectTextRequest: {
-            /** @default local_file */
-            destination: components["schemas"]["Destination"];
-            /** @default type_placeholder */
-            mode: components["schemas"]["ProtectionMode"];
-            /**
-             * Session Id
-             * @default default
-             */
-            session_id: string;
-            /** Text */
-            text: string;
-        };
         /** ProtectedSegment */
         ProtectedSegment: {
             kind: components["schemas"]["SegmentKind"];
@@ -489,6 +475,20 @@ export interface components {
             protected_text: string;
             /** Replacements */
             replacements?: components["schemas"]["AppliedReplacement"][];
+        };
+        /** ProtectTextRequest */
+        ProtectTextRequest: {
+            /** @default local_file */
+            destination: components["schemas"]["Destination"];
+            /** @default type_placeholder */
+            mode: components["schemas"]["ProtectionMode"];
+            /**
+             * Session Id
+             * @default default
+             */
+            session_id: string;
+            /** Text */
+            text: string;
         };
         /**
          * ProviderDataType
@@ -870,6 +870,37 @@ export interface operations {
             };
         };
     };
+    get_provider_providers__profile_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderProfile"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     provider_attestation_status_providers_attestations_status_post: {
         parameters: {
             query?: never;
@@ -919,37 +950,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProviderVerificationResponse"];
-                };
-            };
-        };
-    };
-    get_provider_providers__profile_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                profile_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProviderProfile"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

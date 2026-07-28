@@ -7,7 +7,7 @@
             "$ref": "#/components/schemas/DataCategory"
           },
           "end": {
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "End",
             "type": "integer"
           },
@@ -24,7 +24,7 @@
             "type": "string"
           },
           "start": {
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Start",
             "type": "integer"
           }
@@ -159,8 +159,8 @@
       "ContextAssessment": {
         "properties": {
           "confidence": {
-            "maximum": 1.0,
-            "minimum": 0.0,
+            "maximum": 1,
+            "minimum": 0,
             "title": "Confidence",
             "type": "number"
           },
@@ -327,7 +327,7 @@
           "column": {
             "anyOf": [
               {
-                "minimum": 1.0,
+                "minimum": 1,
                 "type": "integer"
               },
               {
@@ -337,8 +337,8 @@
             "title": "Column"
           },
           "confidence_score": {
-            "maximum": 1.0,
-            "minimum": 0.0,
+            "maximum": 1,
+            "minimum": 0,
             "title": "Confidence Score",
             "type": "number"
           },
@@ -359,14 +359,14 @@
             "$ref": "#/components/schemas/DetectionSource"
           },
           "end": {
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "End",
             "type": "integer"
           },
           "end_column": {
             "anyOf": [
               {
-                "minimum": 1.0,
+                "minimum": 1,
                 "type": "integer"
               },
               {
@@ -378,7 +378,7 @@
           "end_line": {
             "anyOf": [
               {
-                "minimum": 1.0,
+                "minimum": 1,
                 "type": "integer"
               },
               {
@@ -417,7 +417,7 @@
           "line": {
             "anyOf": [
               {
-                "minimum": 1.0,
+                "minimum": 1,
                 "type": "integer"
               },
               {
@@ -462,7 +462,7 @@
             "$ref": "#/components/schemas/Severity"
           },
           "start": {
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Start",
             "type": "integer"
           }
@@ -897,7 +897,7 @@
           "retention_days": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "minimum": 0,
                 "type": "integer"
               },
               {
@@ -970,7 +970,7 @@
           "maximum_retention_days": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "minimum": 0,
                 "type": "integer"
               },
               {
@@ -1155,8 +1155,8 @@
       "RiskFactor": {
         "properties": {
           "contribution": {
-            "maximum": 100.0,
-            "minimum": 0.0,
+            "maximum": 100,
+            "minimum": 0,
             "title": "Contribution",
             "type": "integer"
           },
@@ -1173,8 +1173,8 @@
             "type": "string"
           },
           "weight": {
-            "maximum": 100.0,
-            "minimum": 0.0,
+            "maximum": 100,
+            "minimum": 0,
             "title": "Weight",
             "type": "integer"
           }
@@ -1202,8 +1202,8 @@
             "$ref": "#/components/schemas/RecommendedAction"
           },
           "score": {
-            "maximum": 100.0,
-            "minimum": 0.0,
+            "maximum": 100,
+            "minimum": 0,
             "title": "Score",
             "type": "integer"
           },
@@ -1319,12 +1319,12 @@
         "description": "A content-free source offset range.",
         "properties": {
           "end": {
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "End",
             "type": "integer"
           },
           "start": {
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Start",
             "type": "integer"
           }

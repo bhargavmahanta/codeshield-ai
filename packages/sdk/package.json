@@ -14,7 +14,7 @@
   },
   "dependencies": { "@codeshield-ai/shared": "0.6.0" },
   "devDependencies": {
-    "typescript": "^5.8.0",
+    "typescript": "5.9.3",
     "vitest": "^3.2.0"
   }
 }

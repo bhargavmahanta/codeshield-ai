@@ -10,6 +10,9 @@ import { spawnSync } from "node:child_process";
 import process from "node:process";
 
 import {
+  canonicalizeJsonFile,
+  canonicalizeTextFile,
+  contractDriftDiagnostic,
   filesEqual,
   safeReplace,
   SafeFileError,
@@ -29,25 +32,40 @@ const generated = path.join(temporary, "generated.ts");
 try {
   const python = process.env.CODESHIELD_PYTHON?.trim() || "python";
   run(python, ["engine/scripts/export_openapi.py", openapi]);
+  canonicalizeJsonFile(openapi);
   validateOpenApi(openapi);
   run(process.execPath, [
     "node_modules/openapi-typescript/bin/cli.js",
     openapi,
+    "--alphabetize",
     "-o",
     generated,
   ]);
+  canonicalizeTextFile(generated);
   validateGeneratedTypes(generated);
 
   if (mode === "--check") {
     const drift = [];
     if (!filesEqual(openapi, path.join(root, "packages/shared/openapi.json"))) {
-      drift.push("packages/shared/openapi.json");
+      drift.push(
+        contractDriftDiagnostic(
+          openapi,
+          path.join(root, "packages/shared/openapi.json"),
+          "packages/shared/openapi.json",
+        ),
+      );
     }
     if (!filesEqual(generated, path.join(root, "packages/shared/src/generated.ts"))) {
-      drift.push("packages/shared/src/generated.ts");
+      drift.push(
+        contractDriftDiagnostic(
+          generated,
+          path.join(root, "packages/shared/src/generated.ts"),
+          "packages/shared/src/generated.ts",
+        ),
+      );
     }
     if (drift.length) {
-      throw new SafeFileError(`Generated contract drift: ${drift.join(", ")}`);
+      throw new SafeFileError(drift.join("\n"));
     }
   } else {
     safeReplace(openapi, "packages/shared/openapi.json", root);
