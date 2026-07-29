@@ -80,6 +80,29 @@ def test_phase6_fragment_suite_is_versioned_safe_and_gated(tmp_path: Path) -> No
     assert "masked_preview" not in serialized
 
 
+def test_phase8_proxy_suite_is_versioned_safe_and_gated(tmp_path: Path) -> None:
+    report_path = tmp_path / "phase8.json"
+
+    report = run_evaluation(
+        profile=DetectorProfile.CORE,
+        output=report_path,
+        root=tmp_path / "data",
+        suite="phase8",
+    )
+
+    assert report["suite"] == "phase8"
+    assert report["metrics"]["proxy"]["exact"]["recall"] == 1.0
+    assert report["metrics"]["proxy"]["block_recall"] == 1.0
+    assert (
+        report["metrics"]["proxy"]["negative_case_false_positive_rate"]
+        <= 0.02
+    )
+    serialized = report_path.read_text(encoding="utf-8")
+    assert "sk_" + "live_51" not in serialized
+    assert "masked_preview" not in serialized
+    assert '"text"' not in serialized
+
+
 def test_report_comparison_rejects_security_or_metric_regression(tmp_path: Path) -> None:
     baseline_path = tmp_path / "baseline.json"
     candidate_path = tmp_path / "candidate.json"

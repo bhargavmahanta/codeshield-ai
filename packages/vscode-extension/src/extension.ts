@@ -898,7 +898,7 @@ async function showSafeError(error: unknown): Promise<void> {
   const messages: Record<string, string> = {
     CS_ENGINE_MISSING: "CodeShield: the configured local engine is unavailable.",
     CS_ENGINE_VERSION_INCOMPATIBLE:
-      "CodeShield: engine 0.7.x is required for this extension.",
+      "CodeShield: engine 0.8.x is required for this extension.",
     CS_ENGINE_BUSY: "CodeShield: another operation is already running for this workspace.",
     CS_ENGINE_TIMEOUT: "CodeShield: the local engine timed out.",
     CS_ENGINE_CANCELLED: "CodeShield: the operation was cancelled.",

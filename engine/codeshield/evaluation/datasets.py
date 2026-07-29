@@ -29,6 +29,12 @@ def generate_phase6(seed: int = 42) -> dict[str, list[EvaluationCase]]:
     return generated
 
 
+def generate_phase8(seed: int = 42) -> dict[str, list[EvaluationCase]]:
+    generated = generate_phase6(seed)
+    generated["proxy-synthetic"] = _proxy_cases(seed)
+    return generated
+
+
 def write_jsonl(path: Path, cases: Iterable[EvaluationCase]) -> str:
     def safe_record(case: EvaluationCase) -> dict[str, object]:
         record = case.model_dump(mode="json")
@@ -235,6 +241,81 @@ def _fragment_cases(seed: int) -> list[EvaluationCase]:
         for index, (suffix_value, text) in enumerate(negatives, start=1)
     )
     return cases
+
+
+def _proxy_cases(seed: int) -> list[EvaluationCase]:
+    randomizer = random.Random(seed + 8)
+    suffix = "".join(
+        randomizer.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(18)
+    )
+    api_key = _runtime_text("s", "k", "_", "li", "ve_51PhaseEight", suffix)
+    database = _runtime_text(
+        "postgres",
+        "ql",
+        "://proxy_user:",
+        "synthetic_password",
+        "@db.example.test/",
+        "proxy_review",
+    )
+    jwt = ".".join(
+        (
+            "eyJhbGciOiJIUzI1NiJ9",
+            "eyJzdWIiOiJwaGFzZTgifQ",
+            "c3ludGhldGljUHJveHlTaWduYXR1cmU",
+        )
+    )
+    cases = [
+        _case(
+            "proxy-api-key",
+            "proxy-positive",
+            f"credential={api_key}",
+            [(DataCategory.API_KEY, api_key)],
+            destination=Destination.EXTERNAL_LLM,
+            action=RecommendedAction.BLOCK,
+        ),
+        _case(
+            "proxy-database",
+            "proxy-positive",
+            f"database={database}",
+            [(DataCategory.DATABASE_CONNECTION_STRING, database)],
+            destination=Destination.EXTERNAL_LLM,
+            action=RecommendedAction.BLOCK,
+        ),
+        _case(
+            "proxy-jwt",
+            "proxy-positive",
+            f"authorization=Bearer {jwt}",
+            [(DataCategory.JWT, jwt)],
+            destination=Destination.EXTERNAL_LLM,
+            action=RecommendedAction.BLOCK,
+        ),
+    ]
+    negatives = [
+        "Summarize this local design review.",
+        "Explain why loopback binding reduces exposure.",
+        "Return a JSON object with status and count.",
+        "The model identifier is model-safe.",
+        "Function tools are inspected before forwarding.",
+        "No private content is present.",
+        "A response is buffered before local release.",
+        "Use deterministic synthetic test data.",
+    ]
+    cases.extend(
+        EvaluationCase(
+            case_id=f"proxy-negative-{index:02d}",
+            suite="proxy-negative",
+            text=text,
+            destination=Destination.EXTERNAL_LLM,
+        )
+        for index, text in enumerate(negatives, start=1)
+    )
+    return cases
+
+
+def _runtime_text(*parts: str) -> str:
+    """Assemble deterministic fixtures without storing credential signatures."""
+
+    return "".join(parts)
 
 
 def _pii_cases(seed: int) -> list[EvaluationCase]:

@@ -9,6 +9,7 @@
 - [Phase 5 evaluation and detector hardening](phase-5-evaluation.md)
 - [Phase 6 cross-platform hardening and interoperability](phase-6-hardening.md)
 - [Phase 7 local VS Code extension](phase-7-vscode-extension.md)
+- [Phase 8 authenticated local LLM proxy](phase-8-local-llm-proxy.md)
 - [Review 1 report, presentation, architecture, and rehearsal package](review-1/README.md)
 
 Later phases will add dedicated architecture, threat model, installation, CLI,

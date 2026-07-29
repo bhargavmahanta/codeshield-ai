@@ -1,8 +1,8 @@
 # CodeShield Engine
 
-Python security engine for CodeShield AI. Version 0.7.0 adds bounded stdin
-editor interoperability and safe relative-path JSON output while preserving
-the Phase 6 SARIF, fragment detection, and cross-platform hardening.
+Python security engine for CodeShield AI. Version 0.8.0 adds an authenticated
+loopback-only LLM proxy with complete outbound/inbound inspection while
+preserving Phase 7 editor interoperability.
 
 ```powershell
 python -m pip install -e ".[dev]"
@@ -19,6 +19,9 @@ codeshield detector status
 codeshield evaluate prepare --suite phase5
 codeshield evaluate run --profile core --output ../reports/local-core.json
 codeshield evaluate run --suite phase6 --profile core --output ../reports/local-phase6.json
+codeshield evaluate run --suite phase8 --profile core --output ../reports/local-phase8.json
+codeshield proxy validate-config C:\secure\codeshield-proxy.yaml
+codeshield proxy serve C:\secure\codeshield-proxy.yaml
 codeshield server
 ```
 
