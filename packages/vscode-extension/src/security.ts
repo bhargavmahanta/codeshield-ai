@@ -53,6 +53,92 @@ export function resolveTrustedPolicy(
   return relative;
 }
 
+export function resolveWorkspaceFile(
+  workspaceRoot: string,
+  relativePath: string,
+): string {
+  const relative = normalizeRelativePath(relativePath);
+  if (!relative) {
+    throw new Error("CS_ENGINE_RESULT_INVALID");
+  }
+  const root = realpathSync(workspaceRoot);
+  const candidate = path.resolve(root, ...relative.split("/"));
+  if (!pathInside(root, candidate)) {
+    throw new Error("CS_ENGINE_RESULT_INVALID");
+  }
+  const resolved = realpathSync(candidate);
+  if (!pathInside(root, resolved) || !lstatSync(resolved).isFile()) {
+    throw new Error("CS_ENGINE_RESULT_INVALID");
+  }
+  return resolved;
+}
+
+export interface OneBasedRange {
+  readonly line: number;
+  readonly column: number;
+  readonly endLine?: number;
+  readonly endColumn?: number;
+}
+
+export interface ValidatedRange {
+  readonly startLine: number;
+  readonly startColumn: number;
+  readonly endLine: number;
+  readonly endColumn: number;
+}
+
+export function validateOneBasedRange(
+  location: OneBasedRange,
+  lineLengths: readonly number[],
+): ValidatedRange {
+  const startLine = location.line - 1;
+  const startColumn = location.column - 1;
+  const endLine = (location.endLine ?? location.line) - 1;
+  const defaultEndColumn =
+    endLine === startLine ? location.column + 1 : 1;
+  const endColumn = (location.endColumn ?? defaultEndColumn) - 1;
+  if (
+    !Number.isInteger(startLine) ||
+    !Number.isInteger(startColumn) ||
+    !Number.isInteger(endLine) ||
+    !Number.isInteger(endColumn) ||
+    startLine < 0 ||
+    startColumn < 0 ||
+    endLine < startLine ||
+    startLine >= lineLengths.length ||
+    endLine >= lineLengths.length ||
+    startColumn > lineLengths[startLine]! ||
+    endColumn > lineLengths[endLine]! ||
+    (endLine === startLine && endColumn <= startColumn)
+  ) {
+    throw new Error("CS_ENGINE_RESULT_INVALID");
+  }
+  return { startLine, startColumn, endLine, endColumn };
+}
+
+export function formatOperationEvent(
+  code: string,
+  count?: number,
+  highestSeverity?: string,
+): string {
+  if (
+    !/^CS_[A-Z_]+$/u.test(code) ||
+    (count !== undefined && (!Number.isInteger(count) || count < 0)) ||
+    (highestSeverity !== undefined &&
+      !["none", "low", "medium", "high", "critical"].includes(highestSeverity))
+  ) {
+    throw new Error("CS_EXTENSION_EVENT_INVALID");
+  }
+  const fields = [code];
+  if (count !== undefined) {
+    fields.push(`count=${count}`);
+  }
+  if (highestSeverity !== undefined) {
+    fields.push(`highest=${highestSeverity}`);
+  }
+  return fields.join(" ");
+}
+
 export function contentFingerprint(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("hex");
 }

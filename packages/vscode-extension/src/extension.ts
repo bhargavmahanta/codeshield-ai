@@ -22,10 +22,13 @@ import {
 } from "./protocol.js";
 import {
   contentFingerprint,
+  formatOperationEvent,
   isBinaryText,
   normalizeRelativePath,
+  resolveWorkspaceFile,
   resolveTrustedPolicy,
   safeSourcePath,
+  validateOneBasedRange,
 } from "./security.js";
 
 const DIAGNOSTIC_SOURCE = "CodeShield";
@@ -178,7 +181,7 @@ async function scanDocument(
   const configuration = configurationFor(document.uri);
   const maxBytes = configuration.get<number>("maxFileBytes", 1_000_000);
   if (isBinaryText(text) || Buffer.byteLength(text, "utf8") > maxBytes) {
-    logEvent("CS_SCAN_SKIPPED", location.sourcePath);
+    logEvent("CS_SCAN_SKIPPED");
     return;
   }
   const version = document.version;
@@ -211,7 +214,7 @@ async function scanDocument(
       }
       const parsed = parseScanResult(result.stdout, text.length);
       if (document.version !== version) {
-        logEvent("CS_SCAN_STALE", location.sourcePath);
+        logEvent("CS_SCAN_STALE");
         return;
       }
       const mapped = parsed.findings.map((finding) =>
@@ -221,9 +224,8 @@ async function scanDocument(
       setRiskStatus(parsed);
       logEvent(
         "CS_SCAN_COMPLETED",
-        location.sourcePath,
         parsed.findings.length,
-        result.durationMs,
+        highestSeverity(parsed),
       );
     } catch (error) {
       setStatus("error");
@@ -313,7 +315,11 @@ async function scanWorkspace(): Promise<void> {
           const parsed = parseScanResult(result.stdout);
           await applyPathDiagnostics(folder, parsed);
           setRiskStatus(parsed);
-          logEvent("CS_WORKSPACE_SCAN_COMPLETED", folder.name, parsed.findings.length);
+          logEvent(
+            "CS_WORKSPACE_SCAN_COMPLETED",
+            parsed.findings.length,
+            highestSeverity(parsed),
+          );
         } catch (error) {
           setStatus("error");
           await showSafeError(error);
@@ -363,7 +369,11 @@ async function checkStaged(): Promise<void> {
         const parsed = parseScanResult(result.stdout);
         await applyPathDiagnostics(folder, parsed);
         setRiskStatus(parsed);
-        logEvent("CS_STAGED_CHECK_COMPLETED", folder.name, parsed.findings.length);
+        logEvent(
+          "CS_STAGED_CHECK_COMPLETED",
+          parsed.findings.length,
+          highestSeverity(parsed),
+        );
       } catch (error) {
         setStatus("error");
         await showSafeError(error);
@@ -494,7 +504,7 @@ async function protectSelection(target?: ProtectionTarget): Promise<void> {
           throw new EngineExecutionError("CS_EDIT_FAILED");
         }
         diagnostics.delete(document.uri);
-        logEvent("CS_PROTECTION_APPLIED", location.sourcePath, preview.replacementCount);
+        logEvent("CS_PROTECTION_APPLIED", preview.replacementCount);
       } catch (error) {
         setStatus("error");
         await showSafeError(error);
@@ -740,17 +750,38 @@ async function applyPathDiagnostics(
     entries.push(finding);
     grouped.set(relative, entries);
   }
+  const prepared: Array<{
+    uri: vscode.Uri;
+    entries: vscode.Diagnostic[];
+  }> = [];
   for (const [relative, findings] of grouped) {
-    const uri = vscode.Uri.joinPath(folder.uri, ...relative.split("/"));
+    const resolved = resolveWorkspaceFile(folder.uri.fsPath, relative);
+    const uri = vscode.Uri.file(resolved);
     const document = await vscode.workspace.openTextDocument(uri);
+    const lineLengths = Array.from(
+      { length: document.lineCount },
+      (_value, index) => document.lineAt(index).text.length,
+    );
     const mapped = findings.map((finding) => {
       if (!finding.line || !finding.column) {
         throw new Error("CS_ENGINE_RESULT_INVALID");
       }
-      const start = new vscode.Position(finding.line - 1, finding.column - 1);
+      const validated = validateOneBasedRange(
+        {
+          line: finding.line,
+          column: finding.column,
+          ...(finding.endLine ? { endLine: finding.endLine } : {}),
+          ...(finding.endColumn ? { endColumn: finding.endColumn } : {}),
+        },
+        lineLengths,
+      );
+      const start = new vscode.Position(
+        validated.startLine,
+        validated.startColumn,
+      );
       const end = new vscode.Position(
-        (finding.endLine ?? finding.line) - 1,
-        Math.max(0, (finding.endColumn ?? finding.column + 1) - 1),
+        validated.endLine,
+        validated.endColumn,
       );
       const diagnostic = new vscode.Diagnostic(
         new vscode.Range(start, end),
@@ -761,7 +792,10 @@ async function applyPathDiagnostics(
       diagnostic.code = `CS.${finding.category}`;
       return diagnostic;
     });
-    diagnostics.set(document.uri, mapped);
+    prepared.push({ uri: document.uri, entries: mapped });
+  }
+  for (const item of prepared) {
+    diagnostics.set(item.uri, item.entries);
   }
 }
 
@@ -817,6 +851,12 @@ function boundedSetting(
 }
 
 function setRiskStatus(result: SafeScanResult): void {
+  const highest = highestSeverity(result);
+  status.text = `$(shield) CodeShield: ${result.findings.length} ${highest}`;
+  status.tooltip = "Local CodeShield finding count and highest severity";
+}
+
+function highestSeverity(result: SafeScanResult): string {
   const rank: Record<string, number> = {
     low: 1,
     medium: 2,
@@ -830,8 +870,7 @@ function setRiskStatus(result: SafeScanResult): void {
         : current,
     "none",
   );
-  status.text = `$(shield) CodeShield: ${result.findings.length} ${highest}`;
-  status.tooltip = "Local CodeShield finding count and highest severity";
+  return highest;
 }
 
 function setStatus(state: "idle" | "scanning" | "error"): void {
@@ -842,21 +881,10 @@ function setStatus(state: "idle" | "scanning" | "error"): void {
 
 function logEvent(
   code: string,
-  relativeTarget?: string,
   count?: number,
-  durationMs?: number,
+  highest?: string,
 ): void {
-  const fields = [code];
-  if (relativeTarget) {
-    fields.push(`target=${normalizeRelativePath(relativeTarget) ?? "workspace"}`);
-  }
-  if (count !== undefined) {
-    fields.push(`count=${count}`);
-  }
-  if (durationMs !== undefined) {
-    fields.push(`duration_ms=${Math.round(durationMs)}`);
-  }
-  output.appendLine(fields.join(" "));
+  output.appendLine(formatOperationEvent(code, count, highest));
 }
 
 async function showSafeError(error: unknown): Promise<void> {
