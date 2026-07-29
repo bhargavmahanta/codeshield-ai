@@ -17,6 +17,7 @@ export const DIST_TARGETS = [
   "packages/shared/dist",
   "packages/cli/dist",
   "packages/sdk/dist",
+  "packages/vscode-extension/dist",
 ];
 
 export const CONTRACT_TARGETS = [

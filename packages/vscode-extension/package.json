@@ -1,0 +1,196 @@
+{
+  "name": "codeshield-ai",
+  "displayName": "CodeShield AI",
+  "description": "Local-first sensitive-data diagnostics and protection for trusted workspaces.",
+  "publisher": "codeshield-ai",
+  "version": "0.7.0",
+  "private": true,
+  "preview": true,
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bhargavmahanta/codeshield-ai.git"
+  },
+  "engines": {
+    "vscode": "^1.127.0"
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "categories": [
+    "Linters",
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:codeshield.scanCurrentFile",
+    "onCommand:codeshield.scanSelection",
+    "onCommand:codeshield.scanWorkspace",
+    "onCommand:codeshield.checkStaged",
+    "onCommand:codeshield.protectSelection",
+    "onCommand:codeshield.clearDiagnostics",
+    "onCommand:codeshield.showDetectorStatus",
+    "onCommand:codeshield.showProviderProfiles",
+    "onCommand:codeshield.verifyProviderAttestation"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Content scanning and protection require workspace trust. Read-only engine metadata remains available.",
+      "restrictedConfigurations": [
+        "codeshield.policyPath",
+        "codeshield.detectorProfile",
+        "codeshield.destination",
+        "codeshield.scanOnSave"
+      ]
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "codeshield.scanCurrentFile",
+        "title": "CodeShield: Scan Current File"
+      },
+      {
+        "command": "codeshield.scanSelection",
+        "title": "CodeShield: Scan Selection"
+      },
+      {
+        "command": "codeshield.scanWorkspace",
+        "title": "CodeShield: Scan Workspace"
+      },
+      {
+        "command": "codeshield.checkStaged",
+        "title": "CodeShield: Check Staged Changes"
+      },
+      {
+        "command": "codeshield.protectSelection",
+        "title": "CodeShield: Protect Selection"
+      },
+      {
+        "command": "codeshield.clearDiagnostics",
+        "title": "CodeShield: Clear Diagnostics"
+      },
+      {
+        "command": "codeshield.showDetectorStatus",
+        "title": "CodeShield: Show Detector Status"
+      },
+      {
+        "command": "codeshield.showProviderProfiles",
+        "title": "CodeShield: Show Provider Profiles"
+      },
+      {
+        "command": "codeshield.verifyProviderAttestation",
+        "title": "CodeShield: Verify Provider Attestation"
+      }
+    ],
+    "configuration": {
+      "title": "CodeShield",
+      "properties": {
+        "codeshield.enginePath": {
+          "type": "string",
+          "default": "codeshield",
+          "scope": "machine",
+          "description": "Locally installed CodeShield engine executable. Workspace settings cannot replace it."
+        },
+        "codeshield.detectorProfile": {
+          "type": "string",
+          "enum": ["core", "enhanced"],
+          "default": "core",
+          "scope": "resource"
+        },
+        "codeshield.policyPath": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Optional policy path relative to the trusted workspace root."
+        },
+        "codeshield.destination": {
+          "type": "string",
+          "enum": [
+            "local_file",
+            "private_git",
+            "public_git",
+            "application_log",
+            "internal_llm",
+            "external_llm",
+            "api_request",
+            "cloud_storage"
+          ],
+          "default": "local_file",
+          "scope": "resource"
+        },
+        "codeshield.providerProfile": {
+          "type": "string",
+          "default": "openai-api-zdr",
+          "scope": "resource"
+        },
+        "codeshield.attestationId": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "ignoreSync": true,
+          "description": "Local provider attestation identifier. This setting is not synchronized."
+        },
+        "codeshield.scanOnSave": {
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "description": "Scan saved text documents. Disabled by default; scan-on-type is never performed."
+        },
+        "codeshield.scanTimeoutSeconds": {
+          "type": "number",
+          "default": 15,
+          "minimum": 1,
+          "maximum": 120,
+          "scope": "resource"
+        },
+        "codeshield.workspaceTimeoutSeconds": {
+          "type": "number",
+          "default": 120,
+          "minimum": 5,
+          "maximum": 600,
+          "scope": "resource"
+        },
+        "codeshield.maxFileBytes": {
+          "type": "integer",
+          "default": 1000000,
+          "minimum": 1,
+          "maximum": 1000000,
+          "scope": "resource"
+        },
+        "codeshield.protectionMode": {
+          "type": "string",
+          "enum": ["redact", "partial_mask", "type_placeholder", "pseudonymize"],
+          "default": "type_placeholder",
+          "scope": "resource"
+        },
+        "codeshield.vaultPath": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "ignoreSync": true,
+          "description": "Absolute path to an encrypted local pseudonym vault. Required only for pseudonymization."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:integration": "node scripts/integration.mjs",
+    "package:vsix": "node scripts/package.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.6",
+    "@types/vscode": "1.125.0",
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "3.9.2",
+    "esbuild": "0.28.1",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7",
+    "yauzl": "3.4.0"
+  }
+}

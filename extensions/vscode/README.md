@@ -1,4 +1,5 @@
 # VS Code Extension
 
-Placeholder for the Phase 4 CodeShield AI VS Code extension.
-
+The implemented Phase 7 extension workspace is
+[`packages/vscode-extension`](../../packages/vscode-extension). This directory
+is retained only as a roadmap pointer.

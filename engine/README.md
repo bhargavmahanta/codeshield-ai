@@ -1,14 +1,15 @@
 # CodeShield Engine
 
-Python security engine for CodeShield AI. Version 0.6.0 adds secure SARIF,
-static fragment reconstruction, read-only interoperability APIs, and
-cross-platform release hardening.
+Python security engine for CodeShield AI. Version 0.7.0 adds bounded stdin
+editor interoperability and safe relative-path JSON output while preserving
+the Phase 6 SARIF, fragment detection, and cross-platform hardening.
 
 ```powershell
 python -m pip install -e ".[dev]"
 python -m pytest tests
 codeshield scan .
 codeshield scan . --format sarif --output ../codeshield.sarif
+Get-Content input.py | codeshield scan-text --stdin --source-path input.py --format json
 codeshield policy validate ../policies/default.yaml
 codeshield protect input.txt --mode type_placeholder --output protected.txt
 codeshield provider verify
