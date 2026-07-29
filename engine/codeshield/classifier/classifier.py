@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from threading import Lock
+from typing import Any
+
 from codeshield.classifier.features import (
     FeatureValue,
     extract_context_features,
@@ -35,10 +38,10 @@ class ContextClassifier:
     """Classify findings without retaining their raw source values."""
 
     def __init__(self, *, uncertain_threshold: float = 0.55, seed: int = 42) -> None:
-        features, labels = generate_synthetic_feature_records(seed=seed)
         self.uncertain_threshold = uncertain_threshold
-        self.pipeline = build_classifier_pipeline(seed=seed)
-        self.pipeline.fit(features, labels)
+        self.seed = seed
+        self._pipeline: Any | None = None
+        self._pipeline_lock = Lock()
 
     def classify(
         self,
@@ -51,8 +54,9 @@ class ContextClassifier:
         if rule_result is not None:
             return rule_result
 
-        probabilities = self.pipeline.predict_proba([features])[0]
-        classes = self.pipeline.classes_
+        pipeline = self._classifier_pipeline()
+        probabilities = pipeline.predict_proba([features])[0]
+        classes = pipeline.classes_
         best_index = int(probabilities.argmax())
         confidence = float(probabilities[best_index])
         label = ContextLabel(str(classes[best_index]))
@@ -88,6 +92,19 @@ class ContextClassifier:
         if finding.data_category is DataCategory.IP_ADDRESS:
             return _assessment(ContextLabel.PUBLIC_INFORMATION, 0.72, signals)
         return None
+
+    def _classifier_pipeline(self) -> Any:
+        """Train the deterministic fallback only when rule classification needs it."""
+
+        if self._pipeline is not None:
+            return self._pipeline
+        with self._pipeline_lock:
+            if self._pipeline is None:
+                features, labels = generate_synthetic_feature_records(seed=self.seed)
+                pipeline = build_classifier_pipeline(seed=self.seed)
+                pipeline.fit(features, labels)
+                self._pipeline = pipeline
+        return self._pipeline
 
 
 def _assessment(

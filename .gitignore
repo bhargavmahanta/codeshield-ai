@@ -36,6 +36,8 @@ build/
 .next/
 coverage/
 *.tgz
+artifacts/
+.vscode-test/
 
 .env
 .env.*

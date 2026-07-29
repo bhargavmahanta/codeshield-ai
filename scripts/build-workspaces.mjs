@@ -28,6 +28,11 @@ const workspaces = [
     config: "packages/sdk/tsconfig.json",
     expected: ["packages/sdk/dist/index.js", "packages/sdk/dist/index.d.ts"],
   },
+  {
+    name: "CodeShield VS Code extension",
+    workspace: "packages/vscode-extension",
+    expected: ["packages/vscode-extension/dist/extension.js"],
+  },
 ];
 
 try {
@@ -52,9 +57,20 @@ try {
 }
 
 function runTypeScript(workspace) {
+  const npmCli = process.env.npm_execpath;
+  if (
+    workspace.workspace &&
+    (!npmCli || path.basename(npmCli).toLowerCase() !== "npm-cli.js")
+  ) {
+    throw new SafeFileError("The npm workspace runner is unavailable.");
+  }
+  const command = process.execPath;
+  const args = workspace.workspace
+    ? [npmCli, "run", "build", "--workspace", workspace.workspace]
+    : ["node_modules/typescript/bin/tsc", "-p", workspace.config];
   const result = spawnSync(
-    process.execPath,
-    ["node_modules/typescript/bin/tsc", "-p", workspace.config],
+    command,
+    args,
     {
       cwd: root,
       shell: false,
@@ -71,5 +87,5 @@ function runTypeScript(workspace) {
       `Build output for ${workspace.name} is locked; close tools using its dist directory and retry.`,
     );
   }
-  throw new SafeFileError(`TypeScript compilation failed for ${workspace.name}.`);
+  throw new SafeFileError(`Compilation failed for ${workspace.name}.`);
 }

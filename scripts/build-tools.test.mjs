@@ -18,7 +18,7 @@ import {
 
 function temporaryRepository() {
   const root = mkdtempSync(path.join(os.tmpdir(), "codeshield-build-tools-"));
-  for (const workspace of ["shared", "cli", "sdk"]) {
+  for (const workspace of ["shared", "cli", "sdk", "vscode-extension"]) {
     mkdirSync(path.join(root, "packages", workspace, "dist"), { recursive: true });
     mkdirSync(path.join(root, "packages", workspace, "src"), { recursive: true });
     writeFileSync(
@@ -38,7 +38,7 @@ test("cleanBuildOutputs deletes only fixed dist directories", () => {
   const root = temporaryRepository();
   try {
     cleanBuildOutputs(root);
-    for (const workspace of ["shared", "cli", "sdk"]) {
+    for (const workspace of ["shared", "cli", "sdk", "vscode-extension"]) {
       assert.equal(existsSync(path.join(root, "packages", workspace, "dist")), false);
       assert.equal(
         readFileSync(path.join(root, "packages", workspace, "src", "index.ts"), "utf8"),

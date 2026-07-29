@@ -49,6 +49,34 @@ def test_cli_scan_returns_zero_when_no_findings(tmp_path: Path) -> None:
     assert "0 finding" in result.output
 
 
+def test_cli_scan_relative_paths_never_emits_local_root(tmp_path: Path) -> None:
+    target = tmp_path / "src" / "settings.txt"
+    target.parent.mkdir()
+    raw = synthetic_api_key()
+    target.write_text(f'api_key = "{raw}"\n', encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "scan",
+            str(tmp_path),
+            "--destination",
+            "public_git",
+            "--format",
+            "json",
+            "--relative-paths",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert str(tmp_path) not in result.output
+    assert raw not in result.output
+    emitted = json.loads(result.stdout)["findings"][0]["file_path"]
+    assert emitted.endswith("src/settings.txt")
+    assert "\\" not in emitted
+    assert ".." not in Path(emitted).parts
+
+
 def test_cli_version() -> None:
     result = runner.invoke(app, ["version"])
 
@@ -86,6 +114,181 @@ def test_cli_protect_writes_placeholder_output(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert output.read_text(encoding="utf-8") == "contact=<EMAIL>"
     assert raw not in result.output
+
+
+def test_scan_text_reads_stdin_and_returns_safe_editor_locations(
+    tmp_path: Path,
+) -> None:
+    raw = synthetic_api_key()
+
+    result = runner.invoke(
+        app,
+        [
+            "scan-text",
+            "--stdin",
+            "--repository",
+            str(tmp_path),
+            "--source-path",
+            "src/settings.py",
+            "--destination",
+            "public_git",
+            "--profile",
+            "core",
+            "--format",
+            "json",
+        ],
+        input=f'api_key = "{raw}"\n',
+    )
+
+    assert result.exit_code == 2
+    assert raw not in result.output
+    payload = json.loads(result.stdout)
+    assert payload["files_scanned"] == 1
+    assert payload["findings"][0]["file_path"] == "src/settings.py"
+    assert payload["findings"][0]["line"] == 1
+
+
+def test_protect_text_returns_structured_preview_without_echoing_raw_secret(
+    tmp_path: Path,
+) -> None:
+    raw = "editor.person@example.test"
+
+    result = runner.invoke(
+        app,
+        [
+            "protect-text",
+            "--stdin",
+            "--repository",
+            str(tmp_path),
+            "--source-path",
+            "src/contact.txt",
+            "--mode",
+            "type_placeholder",
+            "--format",
+            "json",
+        ],
+        input=f"contact={raw}",
+    )
+
+    assert result.exit_code == 1
+    assert raw not in result.output
+    payload = json.loads(result.stdout)
+    assert payload["protected_text"] == "contact=<EMAIL>"
+    assert payload["replacements"][0]["mode"] == "type_placeholder"
+
+
+def test_protect_text_fragment_fails_closed_without_raw_output(
+    tmp_path: Path,
+) -> None:
+    raw_suffix = "SyntheticFragmentValue93628471"
+    text = f'token = "sk_" + "live_51{raw_suffix}"'
+
+    result = runner.invoke(
+        app,
+        [
+            "protect-text",
+            "--stdin",
+            "--repository",
+            str(tmp_path),
+            "--source-path",
+            "src/settings.py",
+        ],
+        input=text,
+    )
+
+    assert result.exit_code == 3
+    assert raw_suffix not in result.output
+    assert "fragmented findings require manual source refactoring" in result.output
+
+
+def test_editor_commands_reject_unsafe_paths_and_oversized_input(
+    tmp_path: Path,
+) -> None:
+    unsafe = runner.invoke(
+        app,
+        [
+            "scan-text",
+            "--stdin",
+            "--repository",
+            str(tmp_path),
+            "--source-path",
+            "../outside.py",
+        ],
+        input="safe",
+    )
+    oversized = runner.invoke(
+        app,
+        [
+            "scan-text",
+            "--stdin",
+            "--repository",
+            str(tmp_path),
+            "--max-input-bytes",
+            "4",
+        ],
+        input="12345",
+    )
+
+    assert unsafe.exit_code == 3
+    assert "repository-relative" in unsafe.output
+    assert oversized.exit_code == 3
+    assert "configured limit" in oversized.output
+
+
+def test_editor_commands_reject_policy_escape(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "scan-text",
+            "--stdin",
+            "--repository",
+            str(tmp_path),
+            "--policy",
+            "../outside.yaml",
+        ],
+        input="safe",
+    )
+
+    assert result.exit_code == 3
+    assert "workspace-relative" in result.output
+
+
+def test_editor_session_handles_sequential_secret_safe_requests(
+    tmp_path: Path,
+) -> None:
+    raw = synthetic_api_key()
+    requests = [
+        {
+            "command": "scan-text",
+            "content": f'api_key = "{raw}"',
+            "repository": str(tmp_path),
+            "source_path": "src/settings.py",
+            "destination": "public_git",
+            "profile": "core",
+            "max_input_bytes": 1_000_000,
+        },
+        {
+            "command": "scan-text",
+            "content": "ordinary local text",
+            "repository": str(tmp_path),
+            "source_path": "src/safe.txt",
+            "destination": "local_file",
+            "profile": "core",
+            "max_input_bytes": 1_000_000,
+        },
+    ]
+
+    result = runner.invoke(
+        app,
+        ["editor-session"],
+        input="\n".join(json.dumps(item) for item in requests) + "\n",
+    )
+
+    assert result.exit_code == 0
+    assert raw not in result.output
+    responses = [json.loads(line) for line in result.stdout.splitlines()]
+    assert [item["exit_code"] for item in responses] == [2, 0]
+    assert responses[0]["result"]["findings"][0]["file_path"] == "src/settings.py"
 
 
 def test_cli_staged_resolves_config_and_blocks_without_raw_output(
@@ -169,6 +372,28 @@ def test_provider_cli_lists_shows_and_verifies_profiles() -> None:
     assert shown.exit_code == 0
     assert '"zero_data_retention": true' in shown.output
     assert verified.exit_code == 0
+
+    listed_json = runner.invoke(app, ["provider", "list", "--format", "json"])
+    verified_json = runner.invoke(app, ["provider", "verify", "--format", "json"])
+    status_json = runner.invoke(
+        app,
+        [
+            "provider",
+            "attestation-status",
+            "openai-api-zdr",
+            "--format",
+            "json",
+        ],
+    )
+
+    assert listed_json.exit_code == 0
+    assert isinstance(json.loads(listed_json.stdout), list)
+    assert json.loads(verified_json.stdout) == {"valid": True, "issues": []}
+    assert json.loads(status_json.stdout) == {
+        "profile_id": "openai-api-zdr",
+        "profile_version": "2026.07",
+        "status": "missing",
+    }
 
 
 def test_provider_attest_cli_records_only_hashes() -> None:

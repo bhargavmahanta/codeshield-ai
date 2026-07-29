@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from datetime import date
 from enum import StrEnum
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Annotated
 
 import typer
@@ -37,6 +38,8 @@ from codeshield.models.enums import (
 )
 from codeshield.models.llm import ContentSegment, LlmPreflightRequest
 from codeshield.models.provider import ProviderAttestation
+from codeshield.models.context import FileContext
+from codeshield.models.scan import ScanResult, SkippedFile
 from codeshield.llm import LlmPreflightService
 from codeshield.providers import AttestationStore, ProviderRegistry, ProviderRegistryError
 from codeshield.policies import PolicyEngine, PolicyLoadError, load_policy
@@ -57,6 +60,9 @@ class OutputFormat(StrEnum):
     HUMAN = "human"
     JSON = "json"
     SARIF = "sarif"
+
+
+MAX_STDIN_BYTES = 1_000_000
 
 
 app = typer.Typer(
@@ -124,6 +130,13 @@ def scan(
         Path | None,
         typer.Option("--policy", help="Validated YAML policy file."),
     ] = None,
+    relative_paths: Annotated[
+        bool,
+        typer.Option(
+            "--relative-paths",
+            help="Emit only normalized paths relative to the scan root.",
+        ),
+    ] = False,
 ) -> None:
     """Scan a path or only added lines in the staged Git diff."""
 
@@ -177,13 +190,15 @@ def scan(
         raise typer.Exit(3) from exc
 
     try:
+        if relative_paths:
+            result = _relativize_result(result, source_root)
         _emit_result(
             result,
             selected_format,
             output_path=output_path,
             source_root=source_root,
         )
-    except SarifError as exc:
+    except (SarifError, RepositoryConfigError) as exc:
         typer.echo(f"CodeShield configuration/execution error: {exc}", err=True)
         raise typer.Exit(3) from exc
 
@@ -217,6 +232,10 @@ def check_staged(
         typer.Option("--timeout", min=0.1),
     ] = 10.0,
     policy: Annotated[Path | None, typer.Option("--policy")] = None,
+    relative_paths: Annotated[
+        bool,
+        typer.Option("--relative-paths"),
+    ] = False,
 ) -> None:
     """Check staged additions for a commit; warnings do not block the commit."""
 
@@ -242,16 +261,282 @@ def check_staged(
         raise typer.Exit(3) from exc
 
     try:
+        if relative_paths:
+            result = _relativize_result(result, source_root)
         _emit_result(
             result,
             selected_format,
             output_path=output_path,
             source_root=source_root,
         )
-    except SarifError as exc:
+    except (SarifError, RepositoryConfigError) as exc:
         typer.echo(f"CodeShield configuration/execution error: {exc}", err=True)
         raise typer.Exit(3) from exc
     raise typer.Exit(2 if _exit_code(result.findings) == 2 else 0)
+
+
+@app.command("scan-text")
+def scan_text(
+    stdin: Annotated[
+        bool,
+        typer.Option("--stdin", help="Read UTF-8 editor content from standard input."),
+    ] = False,
+    source_path: Annotated[
+        str,
+        typer.Option(
+            "--source-path",
+            help="Normalized repository-relative display path for source context.",
+        ),
+    ] = "editor-input.txt",
+    repository: Annotated[
+        Path,
+        typer.Option("--repository", help="Trusted workspace root."),
+    ] = Path("."),
+    destination: Annotated[
+        Destination,
+        typer.Option("--destination", "-d"),
+    ] = Destination.LOCAL_FILE,
+    profile: Annotated[
+        DetectorProfile,
+        typer.Option("--profile"),
+    ] = DetectorProfile.CORE,
+    policy: Annotated[Path | None, typer.Option("--policy")] = None,
+    output_format: Annotated[
+        OutputFormat,
+        typer.Option("--format"),
+    ] = OutputFormat.JSON,
+    max_input_bytes: Annotated[
+        int,
+        typer.Option("--max-input-bytes", min=1, max=MAX_STDIN_BYTES),
+    ] = MAX_STDIN_BYTES,
+) -> None:
+    """Scan bounded editor text from stdin without creating a temporary file."""
+
+    try:
+        if not stdin:
+            raise RepositoryConfigError("--stdin is required")
+        if output_format is not OutputFormat.JSON:
+            raise RepositoryConfigError("scan-text supports only --format json")
+        normalized_path = _safe_source_path(source_path)
+        text = _read_bounded_stdin(max_input_bytes)
+        scanner, file_context = _editor_scanner(
+            repository=repository,
+            policy=policy,
+            profile=profile,
+            source_path=normalized_path,
+        )
+        result = scanner.scan_supplied_text(
+            text,
+            destination=destination,
+            file_context=file_context,
+        )
+        typer.echo(json.dumps(result.model_dump(mode="json"), indent=2))
+    except (
+        OSError,
+        PolicyLoadError,
+        RepositoryConfigError,
+        DetectorError,
+        UnicodeError,
+    ) as exc:
+        _configuration_error(exc)
+    raise typer.Exit(_exit_code(result.findings))
+
+
+@app.command("protect-text")
+def protect_text(
+    stdin: Annotated[
+        bool,
+        typer.Option("--stdin", help="Read UTF-8 editor content from standard input."),
+    ] = False,
+    source_path: Annotated[
+        str,
+        typer.Option("--source-path"),
+    ] = "editor-input.txt",
+    repository: Annotated[
+        Path,
+        typer.Option("--repository", help="Trusted workspace root."),
+    ] = Path("."),
+    destination: Annotated[
+        Destination,
+        typer.Option("--destination", "-d"),
+    ] = Destination.LOCAL_FILE,
+    profile: Annotated[
+        DetectorProfile,
+        typer.Option("--profile"),
+    ] = DetectorProfile.CORE,
+    mode: Annotated[
+        ProtectionMode,
+        typer.Option("--mode", "-m"),
+    ] = ProtectionMode.TYPE_PLACEHOLDER,
+    policy: Annotated[Path | None, typer.Option("--policy")] = None,
+    vault_path: Annotated[
+        Path,
+        typer.Option("--vault", help="Encrypted local pseudonym vault."),
+    ] = Path(".codeshield-vault.sqlite"),
+    session_id: Annotated[
+        str,
+        typer.Option("--session"),
+    ] = "vscode",
+    output_format: Annotated[
+        OutputFormat,
+        typer.Option("--format"),
+    ] = OutputFormat.JSON,
+    max_input_bytes: Annotated[
+        int,
+        typer.Option("--max-input-bytes", min=1, max=MAX_STDIN_BYTES),
+    ] = MAX_STDIN_BYTES,
+) -> None:
+    """Protect bounded editor text from stdin and return a structured preview."""
+
+    vault: PseudonymVault | None = None
+    try:
+        if not stdin:
+            raise RepositoryConfigError("--stdin is required")
+        if output_format is not OutputFormat.JSON:
+            raise RepositoryConfigError("protect-text supports only --format json")
+        if not session_id or len(session_id) > 128:
+            raise RepositoryConfigError("session must contain 1 to 128 characters")
+        normalized_path = _safe_source_path(source_path)
+        text = _read_bounded_stdin(max_input_bytes)
+        scanner, file_context = _editor_scanner(
+            repository=repository,
+            policy=policy,
+            profile=profile,
+            source_path=normalized_path,
+        )
+        if mode is ProtectionMode.PSEUDONYMIZE:
+            vault = PseudonymVault(vault_path, EnvironmentKeyProvider())
+        result = scanner.protect_text(
+            text,
+            destination=destination,
+            mode=mode,
+            file_context=file_context,
+            vault=vault,
+            session_id=session_id,
+        )
+        typer.echo(json.dumps(result.model_dump(mode="json"), indent=2))
+    except (
+        OSError,
+        PolicyLoadError,
+        ProtectionError,
+        VaultError,
+        RepositoryConfigError,
+        DetectorError,
+        UnicodeError,
+    ) as exc:
+        _configuration_error(exc)
+    finally:
+        if vault is not None:
+            vault.close()
+    raise typer.Exit(2 if result.blocked else _exit_code(result.findings))
+
+
+@app.command("editor-session")
+def editor_session() -> None:
+    """Serve sequential bounded editor operations over one local stdio process."""
+
+    for line in sys.stdin:
+        if len(line.encode("utf-8", errors="ignore")) > 4_000_000:
+            _write_session_error("request_too_large")
+            continue
+        vault: PseudonymVault | None = None
+        try:
+            payload = json.loads(line)
+            if not isinstance(payload, dict):
+                raise RepositoryConfigError("editor request must be an object")
+            command = payload.get("command")
+            allowed = {
+                "command",
+                "content",
+                "repository",
+                "source_path",
+                "destination",
+                "profile",
+                "policy",
+                "mode",
+                "vault",
+                "session",
+                "max_input_bytes",
+            }
+            if set(payload) - allowed:
+                raise RepositoryConfigError("editor request has unknown fields")
+            content = payload.get("content")
+            if not isinstance(content, str):
+                raise RepositoryConfigError("editor content must be text")
+            max_bytes = payload.get("max_input_bytes", MAX_STDIN_BYTES)
+            if (
+                not isinstance(max_bytes, int)
+                or isinstance(max_bytes, bool)
+                or max_bytes < 1
+                or max_bytes > MAX_STDIN_BYTES
+                or len(content.encode("utf-8")) > max_bytes
+            ):
+                raise RepositoryConfigError("editor content exceeds the configured limit")
+            repository_value = payload.get("repository")
+            source_value = payload.get("source_path")
+            if not isinstance(repository_value, str) or not isinstance(
+                source_value, str
+            ):
+                raise RepositoryConfigError("editor paths are invalid")
+            source_path = _safe_source_path(source_value)
+            policy_value = payload.get("policy")
+            if policy_value is not None and not isinstance(policy_value, str):
+                raise RepositoryConfigError("editor policy is invalid")
+            scanner, file_context = _editor_scanner(
+                repository=Path(repository_value),
+                policy=Path(policy_value) if policy_value else None,
+                profile=DetectorProfile(str(payload.get("profile", "core"))),
+                source_path=source_path,
+            )
+            destination = Destination(str(payload.get("destination", "local_file")))
+            if command == "scan-text":
+                result = scanner.scan_supplied_text(
+                    content,
+                    destination=destination,
+                    file_context=file_context,
+                )
+                _write_session_result(
+                    _exit_code(result.findings),
+                    result.model_dump(mode="json"),
+                )
+                continue
+            if command != "protect-text":
+                raise RepositoryConfigError("editor command is invalid")
+            mode = ProtectionMode(str(payload.get("mode", "type_placeholder")))
+            session_id = payload.get("session", "vscode")
+            if not isinstance(session_id, str) or not 1 <= len(session_id) <= 128:
+                raise RepositoryConfigError("editor session is invalid")
+            if mode is ProtectionMode.PSEUDONYMIZE:
+                vault_value = payload.get("vault")
+                if not isinstance(vault_value, str) or not vault_value:
+                    raise RepositoryConfigError("local vault path is required")
+                vault = PseudonymVault(Path(vault_value), EnvironmentKeyProvider())
+            result = scanner.protect_text(
+                content,
+                destination=destination,
+                mode=mode,
+                file_context=file_context,
+                vault=vault,
+                session_id=session_id,
+            )
+            _write_session_result(
+                2 if result.blocked else _exit_code(result.findings),
+                result.model_dump(mode="json"),
+            )
+        except (
+            json.JSONDecodeError,
+            ValueError,
+            OSError,
+            PolicyLoadError,
+            ProtectionError,
+            VaultError,
+            RepositoryConfigError,
+            DetectorError,
+        ):
+            _write_session_error("configuration_or_execution_error")
+        finally:
+            if vault is not None:
+                vault.close()
 
 
 @app.command("install-hook")
@@ -429,13 +714,28 @@ def validate_policy(
 
 
 @provider_app.command("list")
-def provider_list() -> None:
+def provider_list(
+    output_format: Annotated[
+        OutputFormat,
+        typer.Option("--format"),
+    ] = OutputFormat.HUMAN,
+) -> None:
     """List reviewed provider profiles without account data."""
 
     try:
         profiles = ProviderRegistry().list()
     except ProviderRegistryError as exc:
         _configuration_error(exc)
+    if output_format is OutputFormat.JSON:
+        typer.echo(
+            json.dumps(
+                [profile.model_dump(mode="json") for profile in profiles],
+                indent=2,
+            )
+        )
+        return
+    if output_format is OutputFormat.SARIF:
+        _configuration_error(ValueError("provider list does not support SARIF"))
     for profile in profiles:
         typer.echo(
             f"{profile.profile_id} {profile.provider} {profile.product} "
@@ -488,18 +788,62 @@ def provider_attest(
 
 
 @provider_app.command("verify")
-def provider_verify() -> None:
+def provider_verify(
+    output_format: Annotated[
+        OutputFormat,
+        typer.Option("--format"),
+    ] = OutputFormat.HUMAN,
+) -> None:
     """Fail when checked-in provider evidence is stale or inconsistent."""
 
     try:
         errors = ProviderRegistry().verify()
     except ProviderRegistryError as exc:
         _configuration_error(exc)
+    if output_format is OutputFormat.JSON:
+        typer.echo(json.dumps({"valid": not errors, "issues": errors}, indent=2))
+        if errors:
+            raise typer.Exit(3)
+        return
+    if output_format is OutputFormat.SARIF:
+        _configuration_error(ValueError("provider verify does not support SARIF"))
     if errors:
         for error in errors:
             typer.echo(error, err=True)
         raise typer.Exit(3)
     typer.echo("Provider profiles are current and internally consistent.")
+
+
+@provider_app.command("attestation-status")
+def provider_attestation_status(
+    profile_id: Annotated[str, typer.Argument()],
+    attestation_id: Annotated[str | None, typer.Option("--id")] = None,
+    output_format: Annotated[
+        OutputFormat,
+        typer.Option("--format"),
+    ] = OutputFormat.JSON,
+) -> None:
+    """Return only the reviewed profile identity and local attestation status."""
+
+    if output_format is not OutputFormat.JSON:
+        _configuration_error(
+            ValueError("provider attestation-status supports only JSON")
+        )
+    try:
+        profile = ProviderRegistry().require(profile_id)
+        status, _ = AttestationStore().status(attestation_id, profile)
+    except ProviderRegistryError as exc:
+        _configuration_error(exc)
+    typer.echo(
+        json.dumps(
+            {
+                "profile_id": profile.profile_id,
+                "profile_version": profile.version,
+                "status": status.value,
+            },
+            indent=2,
+        )
+    )
 
 
 @detector_app.command("status")
@@ -813,6 +1157,132 @@ def _scanner(
 ) -> CodeShieldScanner:
     policy_engine = PolicyEngine.from_path(policy_path)
     return CodeShieldScanner(policy_engine=policy_engine, detector_config=detector_config)
+
+
+def _relativize_result(result: ScanResult, source_root: Path) -> ScanResult:
+    root = source_root.resolve()
+
+    def relative_path(value: str) -> str:
+        candidate = Path(value)
+        try:
+            relative = (
+                candidate.resolve().relative_to(root)
+                if candidate.is_absolute()
+                else candidate
+            )
+        except (OSError, ValueError) as exc:
+            raise RepositoryConfigError(
+                "scan result contains an unsafe source path"
+            ) from exc
+        normalized = _safe_source_path(relative.as_posix())
+        return normalized
+
+    findings = [
+        finding.model_copy(
+            update={
+                "file_path": relative_path(finding.file_path)
+                if finding.file_path
+                else None
+            }
+        )
+        for finding in result.findings
+    ]
+    skipped = [
+        SkippedFile(path=relative_path(item.path), reason=item.reason)
+        for item in result.files_skipped
+    ]
+    return result.model_copy(
+        update={"findings": findings, "files_skipped": skipped}
+    )
+
+
+def _read_bounded_stdin(max_bytes: int) -> str:
+    stream = getattr(sys.stdin, "buffer", sys.stdin)
+    payload = stream.read(max_bytes + 1)
+    if isinstance(payload, str):
+        encoded = payload.encode("utf-8")
+        if len(encoded) > max_bytes:
+            raise RepositoryConfigError("standard input exceeds the configured limit")
+        return payload
+    if len(payload) > max_bytes:
+        raise RepositoryConfigError("standard input exceeds the configured limit")
+    try:
+        return payload.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as exc:
+        raise RepositoryConfigError("standard input must be valid UTF-8") from exc
+
+
+def _write_session_result(exit_code: int, result: dict[str, object]) -> None:
+    sys.stdout.write(
+        json.dumps(
+            {"exit_code": exit_code, "result": result},
+            separators=(",", ":"),
+        )
+        + "\n"
+    )
+    sys.stdout.flush()
+
+
+def _write_session_error(code: str) -> None:
+    sys.stdout.write(
+        json.dumps(
+            {"exit_code": 3, "error_code": code},
+            separators=(",", ":"),
+        )
+        + "\n"
+    )
+    sys.stdout.flush()
+
+
+def _safe_source_path(value: str) -> str:
+    if not value or len(value) > 1024 or "\x00" in value:
+        raise RepositoryConfigError("source path is invalid")
+    normalized = value.replace("\\", "/")
+    posix = PurePosixPath(normalized)
+    windows = PureWindowsPath(value)
+    if (
+        posix.is_absolute()
+        or windows.is_absolute()
+        or bool(windows.drive)
+        or re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", normalized)
+        or any(part in {"", ".", ".."} for part in posix.parts)
+    ):
+        raise RepositoryConfigError("source path must be repository-relative")
+    return posix.as_posix()
+
+
+def _editor_scanner(
+    *,
+    repository: Path,
+    policy: Path | None,
+    profile: DetectorProfile,
+    source_path: str,
+) -> tuple[CodeShieldScanner, FileContext]:
+    root = repository.resolve()
+    if not root.exists() or not root.is_dir():
+        raise RepositoryConfigError("trusted workspace root is unavailable")
+    config_entry = find_repository_config(root)
+    config = config_entry[1] if config_entry else None
+    if policy is not None:
+        if policy.is_absolute() or ".." in policy.parts:
+            raise RepositoryConfigError("policy path must be workspace-relative")
+        resolved_policy = (root / policy).resolve()
+        if not resolved_policy.is_relative_to(root):
+            raise RepositoryConfigError("policy path escapes trusted workspace")
+        if not resolved_policy.is_file():
+            raise RepositoryConfigError("policy file is unavailable")
+        policy = resolved_policy
+    elif config_entry:
+        policy = resolve_policy_path(config_entry[0], config_entry[1])
+    settings = config.detectors if config else DetectorConfig()
+    settings = settings.model_copy(update={"profile": profile})
+    repository_visibility = (
+        config.repository_visibility.value if config is not None else None
+    )
+    context = FileContext.from_path(Path(source_path)).model_copy(
+        update={"path": source_path, "repository_visibility": repository_visibility}
+    )
+    return _scanner(policy, settings), context
 
 
 def _prompt_request(

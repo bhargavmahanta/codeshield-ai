@@ -90,6 +90,35 @@ class CodeShieldScanner:
             assessed.append(finding.with_risk(risk))
         return assessed
 
+    def scan_supplied_text(
+        self,
+        text: str,
+        *,
+        destination: Destination,
+        file_context: FileContext,
+    ) -> ScanResult:
+        """Scan editor-supplied text without reading or resolving its source path."""
+
+        started = time.monotonic()
+        display_path = Path(file_context.path or "editor-input.txt")
+        findings = [
+            _attach_location(finding, text, display_path).model_copy(
+                update={"file_path": file_context.path or "editor-input.txt"}
+            )
+            for finding in self.scan_text(
+                text,
+                destination=destination,
+                file_context=file_context,
+            )
+        ]
+        return ScanResult(
+            destination=destination,
+            findings=findings,
+            files_scanned=1,
+            scanned_bytes=len(text.encode("utf-8")),
+            duration_ms=round((time.monotonic() - started) * 1000, 2),
+        )
+
     def protect_text(
         self,
         text: str,

@@ -1,6 +1,6 @@
 # CodeShield AI
 
-CodeShield AI is a local-first sensitive-data protection framework for developer workflows. Engine 0.6.0 adds cross-platform build hardening, secure SARIF 2.1.0, static fragmented-secret detection, and read-only interoperability APIs to the staged Git, provider policy, CLI, API, and SDK protection stack.
+CodeShield AI is a local-first sensitive-data protection framework for developer workflows. Version 0.7.0 adds a trusted-workspace VS Code extension and bounded editor stdin interoperability while preserving the Phase 6 cross-platform, SARIF, fragment-detection, provider-policy, CLI, API, and SDK security behavior.
 
 The scanner is intentionally local. It never returns complete raw secrets in CLI output or API responses; findings include masked previews only.
 
@@ -61,6 +61,16 @@ The scanner is intentionally local. It never returns complete raw secrets in CLI
 - Read-only detector, provider, verification, and attestation-status API/SDK interfaces.
 - Versioned Phase 6 fragment evaluation with false-positive and latency gates.
 
+## Phase 7 Features
+
+- Local-only VS Code diagnostics for files, selections, workspaces, and staged changes.
+- One owned, shell-free engine subprocess per workspace with bounded stdio messages.
+- Manual scanning by default with opt-in scan-on-save and no scan-on-type behavior.
+- Confirmed, stale-span-safe protection edits with normal VS Code undo support.
+- Workspace Trust enforcement, machine-scoped engine/vault settings, and local policies.
+- Strict runtime result validation and extension-owned messages that exclude previews and raw values.
+- Local allowlisted VSIX packaging with no publishing or Marketplace credentials.
+
 ## Quick Start
 
 Install and test locally from the engine package:
@@ -104,6 +114,8 @@ codeshield protect input.txt --mode type_placeholder --output protected.txt
 codeshield evaluate-context
 codeshield prompt assess --provider openai-api-zdr --file prompt.txt
 codeshield detector status
+Get-Content .\input.py | codeshield scan-text --stdin --source-path input.py --format json
+Get-Content .\input.py | codeshield protect-text --stdin --source-path input.py --format json
 codeshield evaluate prepare --suite phase5
 codeshield evaluate run --profile core --output ../reports/local-core.json
 codeshield evaluate run --suite phase6 --profile core --output ../reports/local-phase6.json
@@ -132,7 +144,7 @@ masked findings only
 ## Current Limitations
 
 - The enhanced profile is optional, larger, and slower than the default core profile.
-- npm packages are local/private; VS Code, Supabase, dashboard, and LLM proxy work remain later phases.
+- npm packages and the VS Code extension remain local/private; Supabase, dashboard, and LLM proxy work remain later phases.
 - Current accuracy results use deterministic synthetic and MIT-methodology-derived data; they do not establish real-world performance.
 - Detection relies on regex and entropy heuristics, so false positives and false negatives are expected.
 
@@ -146,6 +158,7 @@ Detailed documentation:
 - [LLM provider data-handling matrix](docs/provider-data-handling.md)
 - [Phase 5 evaluation and detector hardening](docs/phase-5-evaluation.md)
 - [Phase 6 cross-platform hardening and interoperability](docs/phase-6-hardening.md)
+- [Phase 7 local VS Code extension](docs/phase-7-vscode-extension.md)
 
 ## Roadmap
 
@@ -154,8 +167,8 @@ Detailed documentation:
 3. Completed: provider-aware prompt/source-code classification and preflight.
 4. Completed: optional Presidio/spaCy and Gitleaks adapters with reproducible evaluation gates.
 5. Completed: cross-platform builds, SARIF, fragment-aware detection, and interoperability APIs.
-6. Add the VS Code extension.
-7. Add hosted management API, Supabase schema, dashboard, and later proxy work.
+6. Completed: local VS Code scanning, diagnostics, protection, and VSIX packaging.
+7. Add the local LLM proxy, then hosted management, Supabase, and dashboard work.
 
 ## License Recommendation
 
