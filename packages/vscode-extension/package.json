@@ -3,7 +3,7 @@
   "displayName": "CodeShield AI",
   "description": "Local-first sensitive-data diagnostics and protection for trusted workspaces.",
   "publisher": "codeshield-ai",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "preview": true,
   "license": "UNLICENSED",

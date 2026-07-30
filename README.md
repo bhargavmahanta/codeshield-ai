@@ -1,6 +1,6 @@
 # CodeShield AI
 
-CodeShield AI is a local-first sensitive-data protection framework for developer workflows. Version 0.7.0 adds a trusted-workspace VS Code extension and bounded editor stdin interoperability while preserving the Phase 6 cross-platform, SARIF, fragment-detection, provider-policy, CLI, API, and SDK security behavior.
+CodeShield AI is a local-first sensitive-data protection framework for developer workflows. Version 0.8.0 adds an authenticated loopback-only OpenAI-compatible proxy with complete outbound and inbound inspection while preserving all Phase 7 editor, CLI, API, SDK, policy, and security behavior.
 
 The scanner is intentionally local. It never returns complete raw secrets in CLI output or API responses; findings include masked previews only.
 
@@ -71,6 +71,16 @@ The scanner is intentionally local. It never returns complete raw secrets in CLI
 - Strict runtime result validation and extension-owned messages that exclude previews and raw values.
 - Local allowlisted VSIX packaging with no publishing or Marketplace credentials.
 
+## Phase 8 Features
+
+- Authenticated `127.0.0.1`/`::1` proxy with separate local and upstream credentials.
+- Strict text-only Chat Completions and Responses subsets with function tools.
+- Provider/attestation/policy inspection before opening the upstream connection.
+- Request-scoped in-memory pseudonymization and local restoration after inbound inspection.
+- Full response buffering with all-or-nothing release and fixed sanitized errors.
+- TLS verification, public-address enforcement, redirect rejection, minimal headers, and metadata-only audit.
+- Versioned proxy evaluation and local mock-upstream tests with no real-provider calls.
+
 ## Quick Start
 
 Install and test locally from the engine package:
@@ -119,6 +129,9 @@ Get-Content .\input.py | codeshield protect-text --stdin --source-path input.py 
 codeshield evaluate prepare --suite phase5
 codeshield evaluate run --profile core --output ../reports/local-core.json
 codeshield evaluate run --suite phase6 --profile core --output ../reports/local-phase6.json
+codeshield evaluate run --suite phase8 --profile core --output ../reports/local-phase8.json
+codeshield proxy validate-config C:\secure\codeshield-proxy.yaml
+codeshield proxy serve C:\secure\codeshield-proxy.yaml
 codeshield version
 ```
 
@@ -144,7 +157,7 @@ masked findings only
 ## Current Limitations
 
 - The enhanced profile is optional, larger, and slower than the default core profile.
-- npm packages and the VS Code extension remain local/private; Supabase, dashboard, and LLM proxy work remain later phases.
+- npm packages and the VS Code extension remain local/private; Supabase, dashboard, hosted management, and streaming proxy work remain later phases.
 - Current accuracy results use deterministic synthetic and MIT-methodology-derived data; they do not establish real-world performance.
 - Detection relies on regex and entropy heuristics, so false positives and false negatives are expected.
 
@@ -159,6 +172,7 @@ Detailed documentation:
 - [Phase 5 evaluation and detector hardening](docs/phase-5-evaluation.md)
 - [Phase 6 cross-platform hardening and interoperability](docs/phase-6-hardening.md)
 - [Phase 7 local VS Code extension](docs/phase-7-vscode-extension.md)
+- [Phase 8 authenticated local LLM proxy](docs/phase-8-local-llm-proxy.md)
 
 ## Roadmap
 
@@ -168,7 +182,8 @@ Detailed documentation:
 4. Completed: optional Presidio/spaCy and Gitleaks adapters with reproducible evaluation gates.
 5. Completed: cross-platform builds, SARIF, fragment-aware detection, and interoperability APIs.
 6. Completed: local VS Code scanning, diagnostics, protection, and VSIX packaging.
-7. Add the local LLM proxy, then hosted management, Supabase, and dashboard work.
+7. Completed: authenticated loopback LLM proxy with fail-closed outbound and inbound inspection.
+8. Later: hosted management, Supabase, dashboard, and explicitly approved streaming work.
 
 ## License Recommendation
 

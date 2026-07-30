@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import hmac
+import os
 import re
 import sys
 from datetime import date
@@ -54,6 +56,7 @@ from codeshield.detectors import DetectorError, detector_status
 from codeshield.version import __version__
 from codeshield.evaluation import EvaluationError, compare_reports, prepare_suite, run_evaluation
 from codeshield.sarif import SarifError, render_sarif, write_output
+from codeshield.proxy import ProxyConfigError, create_proxy_app, load_proxy_config
 
 
 class OutputFormat(StrEnum):
@@ -75,11 +78,13 @@ provider_app = typer.Typer(help="Inspect provider evidence and local attestation
 prompt_app = typer.Typer(help="Assess or protect prompts without sending them.")
 detector_app = typer.Typer(help="Inspect local detector profile availability.")
 evaluate_app = typer.Typer(help="Prepare and run reproducible local evaluations.")
+proxy_app = typer.Typer(help="Validate or serve the authenticated local LLM proxy.")
 app.add_typer(policy_app, name="policy")
 app.add_typer(provider_app, name="provider")
 app.add_typer(prompt_app, name="prompt")
 app.add_typer(detector_app, name="detector")
 app.add_typer(evaluate_app, name="evaluate")
+app.add_typer(proxy_app, name="proxy")
 
 
 @app.command()
@@ -955,6 +960,75 @@ def server(
     import uvicorn
 
     uvicorn.run("codeshield.api.main:app", host=host, port=port, reload=reload)
+
+
+@proxy_app.command("validate-config")
+def proxy_validate_config(
+    config_path: Annotated[Path, typer.Argument(help="Absolute machine-local YAML file.")],
+) -> None:
+    """Validate proxy configuration and local provider evidence."""
+
+    try:
+        config = load_proxy_config(config_path)
+    except ProxyConfigError as exc:
+        typer.echo(f"CodeShield proxy configuration error: {exc}", err=True)
+        raise typer.Exit(3) from exc
+    typer.echo(
+        json.dumps(
+            {
+                "valid": True,
+                "schema_version": config.schema_version,
+                "host": config.host,
+                "port": config.port,
+                "provider_profile_id": config.provider_profile_id,
+                "model_count": len(config.allowed_models),
+            },
+            indent=2,
+        )
+    )
+
+
+@proxy_app.command("serve")
+def proxy_serve(
+    config_path: Annotated[Path, typer.Argument(help="Absolute machine-local YAML file.")],
+) -> None:
+    """Run one loopback proxy for one reviewed upstream/profile pair."""
+
+    try:
+        config = load_proxy_config(config_path)
+    except ProxyConfigError as exc:
+        typer.echo(f"CodeShield proxy configuration error: {exc}", err=True)
+        raise typer.Exit(3) from exc
+    local_token = os.environ.get("CODESHIELD_PROXY_TOKEN")
+    upstream_credential = os.environ.get(config.upstream_credential_env)
+    if not local_token or len(local_token) < 32:
+        typer.echo(
+            "CodeShield proxy configuration error: local proxy token is unavailable",
+            err=True,
+        )
+        raise typer.Exit(3)
+    if not upstream_credential:
+        typer.echo(
+            "CodeShield proxy configuration error: upstream credential is unavailable",
+            err=True,
+        )
+        raise typer.Exit(3)
+    if hmac.compare_digest(local_token.encode(), upstream_credential.encode()):
+        typer.echo(
+            "CodeShield proxy configuration error: proxy credentials must be separate",
+            err=True,
+        )
+        raise typer.Exit(3)
+
+    import uvicorn
+
+    uvicorn.run(
+        create_proxy_app(config),
+        host=config.host,
+        port=config.port,
+        access_log=False,
+        log_level="warning",
+    )
 
 
 @app.command("version")

@@ -109,7 +109,12 @@ class LlmPreflightService:
             audit_id=audit_id,
         )
 
-    def protect(self, request: LlmPreflightRequest) -> LlmProtectionResult:
+    def protect(
+        self,
+        request: LlmPreflightRequest,
+        *,
+        vault: PseudonymVault | None = None,
+    ) -> LlmProtectionResult:
         assessment = self.assess(request)
         if assessment.action is RecommendedAction.BLOCK:
             return LlmProtectionResult(assessment=assessment, protected_segments=[])
@@ -150,7 +155,8 @@ class LlmPreflightService:
                 )
                 return LlmProtectionResult(assessment=blocked, protected_segments=[])
         protected: list[ProtectedSegment] = []
-        vault = PseudonymVault(":memory:", InMemoryKeyProvider())
+        owns_vault = vault is None
+        active_vault = vault or PseudonymVault(":memory:", InMemoryKeyProvider())
         protector = TextProtector()
         try:
             by_id = {item.segment_id: item for item in assessment.segments}
@@ -166,7 +172,7 @@ class LlmPreflightService:
                         segment.content,
                         personal_findings,
                         mode=ProtectionMode.PSEUDONYMIZE,
-                        vault=vault,
+                        vault=active_vault,
                         session_id=assessment.audit_id,
                     )
                     content = result.protected_text
@@ -180,7 +186,8 @@ class LlmPreflightService:
                     )
                 )
         finally:
-            vault.close()
+            if owns_vault:
+                active_vault.close()
         return LlmProtectionResult(
             assessment=assessment.model_copy(update={"safe_to_send": True}),
             protected_segments=protected,

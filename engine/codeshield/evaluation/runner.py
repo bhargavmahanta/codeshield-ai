@@ -18,6 +18,7 @@ from codeshield.classifier import evaluate_context_classifier
 from codeshield.evaluation.datasets import (
     generate_phase5,
     generate_phase6,
+    generate_phase8,
     read_jsonl,
     write_jsonl,
 )
@@ -30,7 +31,12 @@ from codeshield.models.enums import (
     Destination,
     RecommendedAction,
 )
-from codeshield.models.enums import ProtectionMode, SegmentKind, SegmentProvenance
+from codeshield.models.enums import (
+    ProtectionMode,
+    SegmentKind,
+    SegmentProvenance,
+    TransferDirection,
+)
 from codeshield.models.llm import ContentSegment, LlmPreflightRequest
 from codeshield.llm import LlmPreflightService, SegmentClassifier
 from codeshield.llm.audit import AuditStore
@@ -52,6 +58,7 @@ def load_manifest(suite: str = "phase5") -> dict[str, Any]:
     filenames = {
         "phase5": "manifest.yaml",
         "phase6": "manifest_phase6.yaml",
+        "phase8": "manifest_phase8.yaml",
     }
     filename = filenames.get(suite)
     if filename is None:
@@ -68,7 +75,12 @@ def prepare_suite(*, suite: str = "phase5", root: Path | None = None) -> dict[st
     _validate_dataset_runtime(manifest)
     target = (root or data_home()) / suite / str(manifest["version"])
     try:
-        generator = generate_phase6 if suite == "phase6" else generate_phase5
+        generators = {
+            "phase5": generate_phase5,
+            "phase6": generate_phase6,
+            "phase8": generate_phase8,
+        }
+        generator = generators[suite]
         generated = generator(seed=int(manifest["seed"]))
     except ImportError as exc:
         raise EvaluationError(
@@ -183,6 +195,11 @@ def run_evaluation(
         if "fragment-synthetic" in cases
         else None
     )
+    proxy = (
+        _proxy_metrics(core_scanner, cases["proxy-synthetic"])
+        if "proxy-synthetic" in cases
+        else None
+    )
     workflow = _workflow_metrics(scanner, cases["workflow-synthetic"])
     workflow.update(_protection_metrics(scanner))
     workflow.update(_llm_safety_metrics(scanner))
@@ -210,6 +227,7 @@ def run_evaluation(
             "pii": pii,
             "all_detection": all_detection,
             **({"fragments": fragments} if fragments is not None else {}),
+            **({"proxy": proxy} if proxy is not None else {}),
             "context": context,
             "workflow": workflow,
             "latency": latency,
@@ -279,6 +297,48 @@ def _workflow_metrics(scanner: CodeShieldScanner, cases: list[object]) -> dict[s
         "restricted_and_mandatory_block_rate": round(
             mandatory_blocked / mandatory, 4
         ) if mandatory else 1.0,
+    }
+
+
+def _proxy_metrics(
+    scanner: CodeShieldScanner, cases: list[object]
+) -> dict[str, object]:
+    detection = detection_metrics(
+        cases,
+        lambda case: scanner.scan_text(
+            case.text, destination=Destination.EXTERNAL_LLM
+        ),
+    )
+    positives = [case for case in cases if case.expected]
+    blocked = 0
+    audit = AuditStore(":memory:", b"phase8-" + b"proxy-evaluation-key-00000001")
+    try:
+        service = LlmPreflightService(
+            classifier=SegmentClassifier(scanner=scanner),
+            audit=audit,
+        )
+        for index, case in enumerate(positives):
+            result = service.assess(
+                LlmPreflightRequest(
+                    segments=[
+                        ContentSegment(
+                            segment_id=f"proxy-{index + 1}",
+                            kind=SegmentKind.USER,
+                            provenance=SegmentProvenance.TRUSTED,
+                            content=case.text,
+                        )
+                    ],
+                    provider_profile_id="unknown-provider",
+                    direction=TransferDirection.OUTBOUND,
+                    purpose="phase8 proxy evaluation",
+                )
+            )
+            blocked += int(result.action is RecommendedAction.BLOCK)
+    finally:
+        audit.close()
+    return {
+        **detection,
+        "block_recall": round(blocked / len(positives), 4) if positives else 1.0,
     }
 
 
@@ -410,6 +470,12 @@ def _gates(report: dict[str, Any]) -> dict[str, bool]:
         gates["fragment_false_positive_rate"] = (
             metrics["fragments"]["negative_case_false_positive_rate"] <= 0.02
         )
+    if "proxy" in metrics:
+        gates["proxy_leak_recall"] = metrics["proxy"]["exact"]["recall"] == 1.0
+        gates["proxy_block_recall"] = metrics["proxy"]["block_recall"] == 1.0
+        gates["proxy_false_positive_rate"] = (
+            metrics["proxy"]["negative_case_false_positive_rate"] <= 0.02
+        )
     return gates
 
 
@@ -430,6 +496,14 @@ def _markdown(report: dict[str, Any]) -> str:
             f"- Fragment negative-case false-positive rate: "
             f"`{metrics['fragments']['negative_case_false_positive_rate']}`\n"
         )
+    proxy_lines = ""
+    if "proxy" in metrics:
+        proxy_lines = (
+            f"- Proxy exact leak recall: `{metrics['proxy']['exact']['recall']}`\n"
+            f"- Proxy block recall: `{metrics['proxy']['block_recall']}`\n"
+            f"- Proxy negative-case false-positive rate: "
+            f"`{metrics['proxy']['negative_case_false_positive_rate']}`\n"
+        )
     return (
         f"# CodeShield {report['codeshield_version']} Evaluation\n\n"
         f"- Profile: `{report['profile']}`\n"
@@ -442,6 +516,7 @@ def _markdown(report: dict[str, Any]) -> str:
         f"`{metrics['core_synthetic']['negative_case_false_positive_rate']}`\n"
         f"- Policy action accuracy: `{metrics['workflow']['policy_action_accuracy']}`\n"
         f"{fragment_lines}"
+        f"{proxy_lines}"
         f"- 100 KB warm p95: `{metrics['latency']['100000']['warm_p95_ms']} ms`\n\n"
         "This aggregate report contains no input text, findings, previews, or paths.\n"
     )

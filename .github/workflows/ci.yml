@@ -161,6 +161,13 @@ jobs:
           codeshield evaluate run --suite phase6 --profile enhanced --output "${{ runner.temp }}/enhanced.json"
           codeshield evaluate compare reports/phase6/core-baseline.json "${{ runner.temp }}/enhanced.json"
 
+      - name: Phase 8 enhanced proxy evaluation gates
+        env:
+          CODESHIELD_DATA_HOME: ${{ runner.temp }}/codeshield-datasets
+        run: |
+          codeshield evaluate run --suite phase8 --profile enhanced --output "${{ runner.temp }}/phase8-enhanced.json"
+          codeshield evaluate compare reports/phase8/enhanced-baseline.json "${{ runner.temp }}/phase8-enhanced.json"
+
   windows-interoperability:
     runs-on: windows-latest
     timeout-minutes: 20
@@ -213,6 +220,39 @@ jobs:
         run: |
           codeshield evaluate run --suite phase6 --profile core --output "${{ runner.temp }}/core.json"
           codeshield evaluate compare reports/phase6/core-baseline.json "${{ runner.temp }}/core.json"
+
+  proxy-integration:
+    name: proxy-integration (${{ matrix.os }}, Python 3.12)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engine/pyproject.toml
+
+      - name: Install local engine and evaluation dependencies
+        run: python -m pip install -e "./engine[dev,evaluation]"
+
+      - name: Mock-upstream proxy security tests
+        run: python -m pytest engine/tests/test_proxy.py
+
+      - name: Phase 8 proxy evaluation gates
+        env:
+          CODESHIELD_DATA_HOME: ${{ runner.temp }}/codeshield-datasets
+        run: |
+          codeshield evaluate run --suite phase8 --profile core --output "${{ runner.temp }}/phase8-core.json"
+          codeshield evaluate compare reports/phase8/core-baseline.json "${{ runner.temp }}/phase8-core.json"
+
+      - name: Local mock-proxy latency gate
+        run: python engine/scripts/benchmark_proxy.py
 
   vscode-extension:
     name: vscode-extension (${{ matrix.os }}, VS Code ${{ matrix.vscode }})
