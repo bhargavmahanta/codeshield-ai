@@ -1,0 +1,50 @@
+suite: phase9
+version: 1.0.0
+seed: 42
+datasets:
+  - id: codeshield-synthetic
+    version: 1.0.0
+    source: CodeShield deterministic generator
+    license: MIT
+    file: codeshield-synthetic.jsonl
+    sha256: 33c7d5b7120b4292ef7d1872f6aa1a0652398b583785f6bd3e23d4b15f75ecbb
+    entity_mapping: CodeShield DataCategory
+  - id: presidio-research-synthetic
+    version: 0.2.5-adapted
+    source: Microsoft Presidio Research synthetic template methodology
+    source_url: https://github.com/microsoft/presidio-research
+    source_distribution: presidio-evaluator==0.2.5
+    source_distribution_sha256: 9b5c691f97f6ddfb02c4abbb6c01f9169e2e0b3a1ef0b2c0e3e5d0685bb8f80d
+    faker_distribution: Faker==40.31.0
+    license: MIT
+    file: presidio-research-synthetic.jsonl
+    sha256: b25f8eb3ea74b841e1176a5836ff402d7b0201457fde5501fe3239be639c0035
+    entity_mapping: PERSON and LOCATION to CodeShield DataCategory
+  - id: workflow-synthetic
+    version: 1.0.0
+    source: CodeShield deterministic workflow generator
+    license: MIT
+    file: workflow-synthetic.jsonl
+    sha256: d72834667a6b10f41e9222e16a0f9b558dd4829efc13a69c1b566d167754ed94
+    entity_mapping: CodeShield DataCategory and RecommendedAction
+  - id: fragment-synthetic
+    version: 1.0.0
+    source: CodeShield deterministic static-fragment generator
+    license: MIT
+    file: fragment-synthetic.jsonl
+    sha256: 7241936c9d2bed0fb6d47c20f0a0d20ea6e6636f37343b1503eea943a0aa986c
+    entity_mapping: CodeShield DataCategory and source spans
+  - id: proxy-synthetic
+    version: 1.0.0
+    source: CodeShield deterministic proxy boundary generator
+    license: MIT
+    file: proxy-synthetic.jsonl
+    sha256: cf63d2cf4587b3067deaf9352f6b812380208ea88052af3f458927525b5a38e3
+    entity_mapping: CodeShield DataCategory and outbound block action
+  - id: management-synthetic
+    version: 1.0.0
+    source: CodeShield deterministic metadata boundary generator
+    license: MIT
+    file: management-synthetic.jsonl
+    sha256: ed7a04c0ac11ad56e445cb2fbaf0024eaa66b990cffb45f6ee4190faf9a5f136
+    entity_mapping: signature and prohibited-metadata rejection

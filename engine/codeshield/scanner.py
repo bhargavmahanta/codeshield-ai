@@ -15,6 +15,7 @@ from codeshield.models.enums import Destination, ProtectionMode
 from codeshield.models.finding import Finding
 from codeshield.models.protection import ProtectionResult
 from codeshield.models.scan import ScanResult, SkippedFile
+from codeshield.management.policy import effective_policy_engine
 from codeshield.policies import PolicyEngine
 from codeshield.pseudonymization import PseudonymVault, TextProtector
 from codeshield.risk import RiskScorer
@@ -53,7 +54,7 @@ class CodeShieldScanner:
     ) -> None:
         self.detectors = detectors or build_detectors(detector_config)
         self.context_classifier = context_classifier or ContextClassifier()
-        self.policy_engine = policy_engine or PolicyEngine()
+        self.policy_engine = effective_policy_engine(policy_engine or PolicyEngine())
         self.risk_scorer = risk_scorer or RiskScorer(self.policy_engine.document.scoring)
         self.protector = protector or TextProtector()
 

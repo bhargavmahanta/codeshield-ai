@@ -19,10 +19,12 @@ from codeshield.evaluation.datasets import (
     generate_phase5,
     generate_phase6,
     generate_phase8,
+    generate_phase9,
     read_jsonl,
     write_jsonl,
 )
 from codeshield.evaluation.metrics import detection_metrics, latency_metrics
+from codeshield.evaluation.management import management_security_metrics
 from codeshield.models.config import DetectorConfig
 from codeshield.models.context import FileContext
 from codeshield.models.enums import (
@@ -59,6 +61,7 @@ def load_manifest(suite: str = "phase5") -> dict[str, Any]:
         "phase5": "manifest.yaml",
         "phase6": "manifest_phase6.yaml",
         "phase8": "manifest_phase8.yaml",
+        "phase9": "manifest_phase9.yaml",
     }
     filename = filenames.get(suite)
     if filename is None:
@@ -79,6 +82,7 @@ def prepare_suite(*, suite: str = "phase5", root: Path | None = None) -> dict[st
             "phase5": generate_phase5,
             "phase6": generate_phase6,
             "phase8": generate_phase8,
+            "phase9": generate_phase9,
         }
         generator = generators[suite]
         generated = generator(seed=int(manifest["seed"]))
@@ -200,6 +204,11 @@ def run_evaluation(
         if "proxy-synthetic" in cases
         else None
     )
+    management = (
+        management_security_metrics(cases["management-synthetic"])
+        if "management-synthetic" in cases
+        else None
+    )
     workflow = _workflow_metrics(scanner, cases["workflow-synthetic"])
     workflow.update(_protection_metrics(scanner))
     workflow.update(_llm_safety_metrics(scanner))
@@ -228,6 +237,7 @@ def run_evaluation(
             "all_detection": all_detection,
             **({"fragments": fragments} if fragments is not None else {}),
             **({"proxy": proxy} if proxy is not None else {}),
+            **({"management": management} if management is not None else {}),
             "context": context,
             "workflow": workflow,
             "latency": latency,
@@ -476,6 +486,16 @@ def _gates(report: dict[str, Any]) -> dict[str, bool]:
         gates["proxy_false_positive_rate"] = (
             metrics["proxy"]["negative_case_false_positive_rate"] <= 0.02
         )
+    if "management" in metrics:
+        gates["management_verification_rejection"] = (
+            metrics["management"]["verification_rejection_recall"] == 1.0
+        )
+        gates["management_prohibited_ingestion_rejection"] = (
+            metrics["management"]["prohibited_ingestion_rejection_recall"] == 1.0
+        )
+        gates["management_false_positive_rate"] = (
+            metrics["management"]["negative_case_false_positive_rate"] <= 0.02
+        )
     return gates
 
 
@@ -504,6 +524,16 @@ def _markdown(report: dict[str, Any]) -> str:
             f"- Proxy negative-case false-positive rate: "
             f"`{metrics['proxy']['negative_case_false_positive_rate']}`\n"
         )
+    management_lines = ""
+    if "management" in metrics:
+        management_lines = (
+            f"- Management verification rejection recall: "
+            f"`{metrics['management']['verification_rejection_recall']}`\n"
+            f"- Prohibited ingestion rejection recall: "
+            f"`{metrics['management']['prohibited_ingestion_rejection_recall']}`\n"
+            f"- Management negative-case false-positive rate: "
+            f"`{metrics['management']['negative_case_false_positive_rate']}`\n"
+        )
     return (
         f"# CodeShield {report['codeshield_version']} Evaluation\n\n"
         f"- Profile: `{report['profile']}`\n"
@@ -517,6 +547,7 @@ def _markdown(report: dict[str, Any]) -> str:
         f"- Policy action accuracy: `{metrics['workflow']['policy_action_accuracy']}`\n"
         f"{fragment_lines}"
         f"{proxy_lines}"
+        f"{management_lines}"
         f"- 100 KB warm p95: `{metrics['latency']['100000']['warm_p95_ms']} ms`\n\n"
         "This aggregate report contains no input text, findings, previews, or paths.\n"
     )

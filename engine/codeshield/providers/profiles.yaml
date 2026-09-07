@@ -1,3 +1,20 @@
+- profile_id: openai-chatgpt-plus-pro-via-opencode
+  version: "2026.09"
+  provider: OpenAI
+  product: ChatGPT subscription via OpenCode
+  plan: Plus or Pro sign-in
+  surface: OpenCode built-in OpenAI OAuth route
+  processor: OpenAI
+  reference_only: true
+  prohibits_training: false
+  maximum_retention_days: null
+  data_residency: No residency guarantee assumed
+  handling:
+    - {data_type: prompt, retained: true, used_for_training: true, human_review_possible: true, notes: Conservative potential use; account controls are not attested. Not an API or Enterprise guarantee.}
+    - {data_type: output, retained: true, used_for_training: true, human_review_possible: true, notes: Conservative potential use; no ZDR or fixed retention guarantee is assumed.}
+  evidence_urls: [https://opencode.ai/docs/providers/, https://help.openai.com/en/articles/11369540-codex-in-chatgpt]
+  reviewed_on: 2026-09-06
+  review_due: 2026-12-05
 - profile_id: openai-api-standard
   version: "2026.07"
   provider: OpenAI

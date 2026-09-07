@@ -1,0 +1,7 @@
+schema_version: 1
+endpoint: http://127.0.0.1:8766
+organization_id: 00000000-0000-4000-8000-000000000001
+device_id: 00000000-0000-4000-8000-000000000002
+signing_public_keys:
+  organization-signing-key: REPLACE_WITH_BASE64URL_ED25519_PUBLIC_KEY
+offline_validity_days: 7

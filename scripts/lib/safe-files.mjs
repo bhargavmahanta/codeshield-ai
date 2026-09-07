@@ -18,11 +18,14 @@ export const DIST_TARGETS = [
   "packages/cli/dist",
   "packages/sdk/dist",
   "packages/vscode-extension/dist",
+  "apps/dashboard/.next",
 ];
 
 export const CONTRACT_TARGETS = [
   "packages/shared/openapi.json",
   "packages/shared/src/generated.ts",
+  "packages/shared/management-openapi.json",
+  "packages/shared/src/management-generated.ts",
 ];
 
 export class SafeFileError extends Error {
@@ -41,6 +44,10 @@ export function cleanBuildOutputs(root) {
     const stat = lstatSync(target);
     if (stat.isSymbolicLink()) {
       throw new SafeFileError(`Refusing to clean symbolic output path: ${relative}`);
+    }
+    const expectedParent = path.resolve(root, path.dirname(relative));
+    if (path.dirname(target) !== expectedParent) {
+      throw new SafeFileError(`Refusing unexpected output parent: ${relative}`);
     }
     try {
       rmSync(target, {

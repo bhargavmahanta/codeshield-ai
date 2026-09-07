@@ -28,6 +28,8 @@ if (!["--write", "--check"].includes(mode)) {
 const temporary = mkdtempSync(path.join(os.tmpdir(), "codeshield-contracts-"));
 const openapi = path.join(temporary, "openapi.json");
 const generated = path.join(temporary, "generated.ts");
+const managementOpenapi = path.join(temporary, "management-openapi.json");
+const managementGenerated = path.join(temporary, "management-generated.ts");
 
 try {
   const python = process.env.CODESHIELD_PYTHON?.trim() || "python";
@@ -43,6 +45,21 @@ try {
   ]);
   canonicalizeTextFile(generated);
   validateGeneratedTypes(generated);
+  run(python, [
+    "apps/management-api/scripts/export_openapi.py",
+    managementOpenapi,
+  ]);
+  canonicalizeJsonFile(managementOpenapi);
+  validateManagementOpenApi(managementOpenapi);
+  run(process.execPath, [
+    "node_modules/openapi-typescript/bin/cli.js",
+    managementOpenapi,
+    "--alphabetize",
+    "-o",
+    managementGenerated,
+  ]);
+  canonicalizeTextFile(managementGenerated);
+  validateGeneratedTypes(managementGenerated);
 
   if (mode === "--check") {
     const drift = [];
@@ -64,12 +81,50 @@ try {
         ),
       );
     }
+    if (
+      !filesEqual(
+        managementOpenapi,
+        path.join(root, "packages/shared/management-openapi.json"),
+      )
+    ) {
+      drift.push(
+        contractDriftDiagnostic(
+          managementOpenapi,
+          path.join(root, "packages/shared/management-openapi.json"),
+          "packages/shared/management-openapi.json",
+        ),
+      );
+    }
+    if (
+      !filesEqual(
+        managementGenerated,
+        path.join(root, "packages/shared/src/management-generated.ts"),
+      )
+    ) {
+      drift.push(
+        contractDriftDiagnostic(
+          managementGenerated,
+          path.join(root, "packages/shared/src/management-generated.ts"),
+          "packages/shared/src/management-generated.ts",
+        ),
+      );
+    }
     if (drift.length) {
       throw new SafeFileError(drift.join("\n"));
     }
   } else {
     safeReplace(openapi, "packages/shared/openapi.json", root);
     safeReplace(generated, "packages/shared/src/generated.ts", root);
+    safeReplace(
+      managementOpenapi,
+      "packages/shared/management-openapi.json",
+      root,
+    );
+    safeReplace(
+      managementGenerated,
+      "packages/shared/src/management-generated.ts",
+      root,
+    );
   }
 } catch (error) {
   const message =
@@ -116,5 +171,32 @@ function validateGeneratedTypes(file) {
   const value = readFileSync(file, "utf8");
   if (value.length < 100 || !value.includes("export interface paths")) {
     throw new SafeFileError("Generated TypeScript contracts failed validation.");
+  }
+}
+
+function validateManagementOpenApi(file) {
+  let value;
+  try {
+    value = JSON.parse(readFileSync(file, "utf8"));
+  } catch {
+    throw new SafeFileError("Generated management OpenAPI document is not valid JSON.");
+  }
+  const required = [
+    "/health",
+    "/version",
+    "/v1/device-tokens",
+    "/v1/policy-bundles/releases",
+    "/v1/policy-bundles/latest",
+    "/v1/audit-events/batch",
+  ];
+  if (
+    typeof value.openapi !== "string" ||
+    !value.openapi.startsWith("3.") ||
+    value.info?.title !== "CodeShield Metadata Management API" ||
+    !required.every((entry) => value.paths?.[entry])
+  ) {
+    throw new SafeFileError(
+      "Generated management OpenAPI document failed structural validation.",
+    );
   }
 }

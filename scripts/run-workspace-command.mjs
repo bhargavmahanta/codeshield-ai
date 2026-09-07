@@ -16,12 +16,14 @@ const tasks = {
     npm(["run", "typecheck", "--workspace", "@codeshield-ai/cli"]),
     npm(["run", "typecheck", "--workspace", "@codeshield-ai/sdk"]),
     npm(["run", "typecheck", "--workspace", "packages/vscode-extension"]),
+    npm(["run", "typecheck", "--workspace", "apps/dashboard"]),
   ],
   test: [
     [process.execPath, ["--test", "scripts/build-tools.test.mjs"]],
     npm(["run", "test", "--workspace", "@codeshield-ai/cli"]),
     npm(["run", "test", "--workspace", "@codeshield-ai/sdk"]),
     npm(["run", "test", "--workspace", "packages/vscode-extension"]),
+    npm(["run", "test", "--workspace", "apps/dashboard"]),
   ],
   "pack-check": [
     npm([

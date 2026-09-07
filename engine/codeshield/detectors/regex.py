@@ -139,7 +139,7 @@ def default_rules() -> list[RegexRule]:
         RegexRule(
             DataCategory.API_KEY,
             re.compile(
-                r"\b(?:api[_-]?key|secret[_-]?key|access[_-]?key|client[_-]?secret)\b\s*[:=]\s*['\"]?([A-Za-z0-9_.\-]{16,})",
+                r"\b(?:[A-Za-z][A-Za-z0-9]*[_-])*(?:api[_-]?key|secret[_-]?key|access[_-]?key|client[_-]?secret)\b\s*[:=]\s*['\"]?([A-Za-z0-9_.\-]{16,})",
                 flags,
             ),
             0.9,

@@ -16,6 +16,8 @@ const workspaces = [
       "packages/shared/dist/index.d.ts",
       "packages/shared/dist/generated.js",
       "packages/shared/dist/generated.d.ts",
+      "packages/shared/dist/management-generated.js",
+      "packages/shared/dist/management-generated.d.ts",
     ],
   },
   {
@@ -32,6 +34,14 @@ const workspaces = [
     name: "CodeShield VS Code extension",
     workspace: "packages/vscode-extension",
     expected: ["packages/vscode-extension/dist/extension.js"],
+  },
+  {
+    name: "CodeShield management dashboard",
+    workspace: "apps/dashboard",
+    expected: [
+      "apps/dashboard/.next/BUILD_ID",
+      "apps/dashboard/.next/server/app-paths-manifest.json",
+    ],
   },
 ];
 
