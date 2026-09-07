@@ -12,7 +12,7 @@ const extensionRoot = path.resolve(
 );
 const repositoryRoot = path.resolve(extensionRoot, "..", "..");
 const artifactDirectory = path.join(repositoryRoot, "artifacts");
-const output = path.join(artifactDirectory, "codeshield-ai-0.8.0.vsix");
+const output = path.join(artifactDirectory, "codeshield-ai-0.9.0.vsix");
 const vsce = path.join(repositoryRoot, "node_modules", "@vscode", "vsce", "vsce");
 
 mkdirSync(artifactDirectory, { recursive: true });

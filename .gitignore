@@ -32,6 +32,9 @@ node_modules/
 .phase8-data/
 .phase8-*.json
 .phase8-*.md
+.phase9-data/
+.phase9-*.json
+.phase9-*.md
 dist/
 build/
 .eggs/
@@ -41,6 +44,8 @@ coverage/
 *.tgz
 artifacts/
 .vscode-test/
+playwright-report/
+test-results/
 
 .env
 .env.*

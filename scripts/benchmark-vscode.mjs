@@ -24,8 +24,8 @@ const version = spawnSync(executable, ["version"], {
   encoding: "utf8",
   stdio: ["ignore", "pipe", "ignore"],
 });
-if (version.status !== 0 || !/^0\.8\.\d+/u.test(version.stdout.trim())) {
-  process.stderr.write("CodeShield benchmark requires the local 0.8.x engine.\n");
+if (version.status !== 0 || !/^0\.9\.\d+/u.test(version.stdout.trim())) {
+  process.stderr.write("CodeShield benchmark requires the local 0.9.x engine.\n");
   process.exit(1);
 }
 

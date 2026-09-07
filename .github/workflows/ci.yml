@@ -168,6 +168,13 @@ jobs:
           codeshield evaluate run --suite phase8 --profile enhanced --output "${{ runner.temp }}/phase8-enhanced.json"
           codeshield evaluate compare reports/phase8/enhanced-baseline.json "${{ runner.temp }}/phase8-enhanced.json"
 
+      - name: Phase 9 enhanced management evaluation gates
+        env:
+          CODESHIELD_DATA_HOME: ${{ runner.temp }}/codeshield-datasets
+        run: |
+          codeshield evaluate run --suite phase9 --profile enhanced --output "${{ runner.temp }}/phase9-enhanced.json"
+          codeshield evaluate compare reports/phase9/enhanced-baseline.json "${{ runner.temp }}/phase9-enhanced.json"
+
   windows-interoperability:
     runs-on: windows-latest
     timeout-minutes: 20
@@ -213,6 +220,7 @@ jobs:
           engine/tests/test_sarif.py
           engine/tests/test_api.py
           engine/tests/test_cli.py
+          engine/tests/test_management.py
 
       - name: Phase 6 core evaluation gates
         env:
@@ -303,3 +311,60 @@ jobs:
       - name: Validate local VSIX contents
         if: runner.os == 'Linux' && matrix.vscode == '1.130.0'
         run: npm run package:vsix
+
+  management-plane:
+    name: management-plane (Ubuntu, Python 3.12, Node 22)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            engine/pyproject.toml
+            apps/management-api/pyproject.toml
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install local management dependencies
+        run: |
+          python -m pip install -e "./engine[dev,evaluation]" -e "./apps/management-api[dev]"
+          npm ci
+
+      - name: Replay local Supabase and run database checks
+        shell: bash
+        run: |
+          npx supabase start
+          trap 'npx supabase stop --no-backup' EXIT
+          npx supabase test db
+          npx supabase db lint --local --level warning
+
+          status="$(npx supabase status -o env)"
+          export SUPABASE_SERVICE_ROLE_KEY="$(sed -n 's/^SERVICE_ROLE_KEY="\(.*\)"$/\1/p' <<<"$status")"
+          export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$(sed -n 's/^PUBLISHABLE_KEY="\(.*\)"$/\1/p' <<<"$status")"
+          export NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:54321"
+          export CODESHIELD_MANAGEMENT_API_URL="http://127.0.0.1:8766"
+          export CODESHIELD_LOCAL_SUPABASE_TEST=1
+
+          python -m pytest apps/management-api/tests
+          npm run test --workspace apps/dashboard
+          npm run typecheck --workspace apps/dashboard
+          npm run build --workspace apps/dashboard
+          npx playwright install --with-deps chromium
+          npm run test:e2e --workspace apps/dashboard
+
+      - name: Phase 9 management evaluation gates
+        env:
+          CODESHIELD_DATA_HOME: ${{ runner.temp }}/codeshield-datasets
+        run: |
+          codeshield evaluate run --suite phase9 --profile core --output "${{ runner.temp }}/phase9-core.json"
+          codeshield evaluate compare reports/phase9/core-baseline.json "${{ runner.temp }}/phase9-core.json"
+
+      - name: Signed-policy pull latency gate
+        run: python engine/scripts/benchmark_management.py

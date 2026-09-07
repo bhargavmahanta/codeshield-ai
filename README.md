@@ -1,6 +1,6 @@
 # CodeShield AI
 
-CodeShield AI is a local-first sensitive-data protection framework for developer workflows. Version 0.8.0 adds an authenticated loopback-only OpenAI-compatible proxy with complete outbound and inbound inspection while preserving all Phase 7 editor, CLI, API, SDK, policy, and security behavior.
+CodeShield AI is a local-first sensitive-data protection framework for developer workflows. Version 0.9.0 adds an optional metadata-only organizational management plane backed by a reproducible local Supabase stack while keeping scanning, prompts, responses, paths, secrets, and pseudonym mappings on the developer machine.
 
 The scanner is intentionally local. It never returns complete raw secrets in CLI output or API responses; findings include masked previews only.
 
@@ -81,6 +81,15 @@ The scanner is intentionally local. It never returns complete raw secrets in CLI
 - TLS verification, public-address enforcement, redirect rejection, minimal headers, and metadata-only audit.
 - Versioned proxy evaluation and local mock-upstream tests with no real-provider calls.
 
+## Phase 9 Features
+
+- Dedicated exposed `api` and unexposed `private` Supabase schemas with explicit grants, forced RLS, and two-tenant pgTAP coverage.
+- Tenant roles sourced from membership rows: administrator, security analyst, and developer.
+- Separate FastAPI management service for one-time device tokens, immutable Ed25519 policy releases, explicit bundle pulls, revocation, and aggregate audit ingestion.
+- Machine-local management configuration, environment-only device credentials, atomic activation, seven-day offline validity, and fail-closed expiry/tamper/downgrade behavior.
+- Private Next.js 16 App Router dashboard with cookie SSR, role-aware navigation, direct RLS-authorized CRUD, and metadata allowlists.
+- Versioned Phase 9 verification/ingestion evaluation, local policy-pull benchmark, deterministic management contracts, and Ubuntu/Windows interoperability CI.
+
 ## Quick Start
 
 Install and test locally from the engine package:
@@ -130,8 +139,13 @@ codeshield evaluate prepare --suite phase5
 codeshield evaluate run --profile core --output ../reports/local-core.json
 codeshield evaluate run --suite phase6 --profile core --output ../reports/local-phase6.json
 codeshield evaluate run --suite phase8 --profile core --output ../reports/local-phase8.json
+codeshield evaluate run --suite phase9 --profile core --output ../reports/local-phase9.json
 codeshield proxy validate-config C:\secure\codeshield-proxy.yaml
 codeshield proxy serve C:\secure\codeshield-proxy.yaml
+codeshield management validate-config C:\secure\codeshield-management.yaml
+codeshield management status
+codeshield management pull-policy
+codeshield management upload-audit --dry-run
 codeshield version
 ```
 
@@ -157,7 +171,7 @@ masked findings only
 ## Current Limitations
 
 - The enhanced profile is optional, larger, and slower than the default core profile.
-- npm packages and the VS Code extension remain local/private; Supabase, dashboard, hosted management, and streaming proxy work remain later phases.
+- npm packages and the VS Code extension remain local/private. The management plane is optional and local-only; hosted operation and streaming proxy support remain later explicit work.
 - Current accuracy results use deterministic synthetic and MIT-methodology-derived data; they do not establish real-world performance.
 - Detection relies on regex and entropy heuristics, so false positives and false negatives are expected.
 
@@ -173,6 +187,7 @@ Detailed documentation:
 - [Phase 6 cross-platform hardening and interoperability](docs/phase-6-hardening.md)
 - [Phase 7 local VS Code extension](docs/phase-7-vscode-extension.md)
 - [Phase 8 authenticated local LLM proxy](docs/phase-8-local-llm-proxy.md)
+- [Phase 9 metadata-only management plane](docs/phase-9-management-plane.md)
 
 ## Roadmap
 
@@ -183,7 +198,8 @@ Detailed documentation:
 5. Completed: cross-platform builds, SARIF, fragment-aware detection, and interoperability APIs.
 6. Completed: local VS Code scanning, diagnostics, protection, and VSIX packaging.
 7. Completed: authenticated loopback LLM proxy with fail-closed outbound and inbound inspection.
-8. Later: hosted management, Supabase, dashboard, and explicitly approved streaming work.
+8. Completed: local Supabase management foundation, signed policy delivery, explicit aggregate audit upload, and private dashboard.
+9. Later: explicitly approved deployment/release engineering and streaming proxy work.
 
 ## License Recommendation
 

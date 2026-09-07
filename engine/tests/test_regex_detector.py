@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from codeshield.detectors.regex import RegexDetector
 from codeshield.models.enums import DataCategory
 
@@ -38,3 +40,36 @@ def test_regex_detector_detects_private_key_without_exposing_body() -> None:
     assert findings[0].masked_preview.startswith("<PRIVATE_KEY:")
     assert "MIIEvQIB" not in findings[0].masked_preview
 
+
+def test_regex_detector_detects_prefixed_credential_assignment_value_span() -> None:
+    secret = "sk-proj-CODESHIELD_FAKE_DEMO_KEY_839274"
+    text = f"OPENAI_API_KEY={secret}\n"
+
+    findings = [
+        finding
+        for finding in RegexDetector().detect(text)
+        if finding.data_category is DataCategory.API_KEY
+    ]
+
+    assert len(findings) == 1
+    assert (findings[0].start, findings[0].end) == (
+        text.index(secret),
+        text.index(secret) + len(secret),
+    )
+    assert secret not in findings[0].masked_preview
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "OPENAI_MODEL=sk-proj-CODESHIELD_FAKE_DEMO_KEY_839274",
+        "OPENAI_API_KEY_SUFFIX=sk-proj-CODESHIELD_FAKE_DEMO_KEY_839274",
+        "OPENAI_API_KEY=placeholder",
+    ],
+)
+def test_regex_detector_ignores_noncredential_prefixed_assignments(text: str) -> None:
+    findings = RegexDetector().detect(text)
+
+    assert all(
+        finding.data_category is not DataCategory.API_KEY for finding in findings
+    )

@@ -7,6 +7,7 @@ from codeshield.api.main import app
 from codeshield.models.provider import ProviderAttestation
 from codeshield.providers import AttestationStore, ProviderRegistry
 from codeshield.version import __version__
+from tests.clock import controlled_clock
 
 
 def test_health_endpoint() -> None:
@@ -188,21 +189,22 @@ def test_llm_protect_returns_only_pseudonymized_personal_data() -> None:
     client = TestClient(app)
     raw = "api-reviewer@example.test"
 
-    response = client.post(
-        "/llm/protect",
-        json={
-            "segments": [
-                {
-                    "segment_id": "one",
-                    "kind": "user",
-                    "content": f"contact={raw}",
-                }
-            ],
-            "provider_profile_id": "openai-api-zdr",
-            "attestation_id": _api_attestation(),
-            "purpose": "API protection test",
-        },
-    )
+    with controlled_clock(date(2026, 8, 1)):
+        response = client.post(
+            "/llm/protect",
+            json={
+                "segments": [
+                    {
+                        "segment_id": "one",
+                        "kind": "user",
+                        "content": f"contact={raw}",
+                    }
+                ],
+                "provider_profile_id": "openai-api-zdr",
+                "attestation_id": _api_attestation(),
+                "purpose": "API protection test",
+            },
+        )
 
     assert response.status_code == 200
     assert response.json()["assessment"]["safe_to_send"] is True

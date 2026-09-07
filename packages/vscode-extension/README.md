@@ -2,7 +2,7 @@
 
 CodeShield provides local sensitive-data diagnostics and confirmed protection
 edits for trusted workspaces. It launches a separately installed CodeShield
-`0.8.x` engine with fixed arguments and sends unsaved editor text only over
+`0.9.x` engine with fixed arguments and sends unsaved editor text only over
 standard input.
 
 Scanning is manual by default. `codeshield.scanOnSave` is opt-in, and the

@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 from codeshield.cli import app
 from codeshield.models.provider import ProviderAttestation
 from codeshield.providers import AttestationStore, ProviderRegistry
+from tests.clock import controlled_clock
 from tests.git_helpers import git, initialize_repository, synthetic_api_key
 
 
@@ -353,9 +354,10 @@ def test_check_staged_exception_warns_but_returns_success(tmp_path: Path) -> Non
     (fixture / "key.txt").write_text(f"api_key = '{raw}'\n", encoding="utf-8")
     git(repository, "add", ".")
 
-    result = runner.invoke(
-        app, ["check-staged", "--repository", str(repository)]
-    )
+    with controlled_clock(date(2026, 8, 1)):
+        result = runner.invoke(
+            app, ["check-staged", "--repository", str(repository)]
+        )
 
     assert result.exit_code == 0
     assert "exception=review-test-api-key" in result.output
@@ -397,26 +399,27 @@ def test_provider_cli_lists_shows_and_verifies_profiles() -> None:
 
 
 def test_provider_attest_cli_records_only_hashes() -> None:
-    result = runner.invoke(
-        app,
-        [
-            "provider",
-            "attest",
-            "openai-api-zdr",
-            "--id",
-            "cli-provider-review",
-            "--account-hash",
-            "3" * 64,
-            "--evidence-digest",
-            "4" * 64,
-            "--reviewer",
-            "security-reviewer",
-            "--expires",
-            "2026-08-31",
-            "--control",
-            "zdr-reviewed",
-        ],
-    )
+    with controlled_clock(date(2026, 8, 1)):
+        result = runner.invoke(
+            app,
+            [
+                "provider",
+                "attest",
+                "openai-api-zdr",
+                "--id",
+                "cli-provider-review",
+                "--account-hash",
+                "3" * 64,
+                "--evidence-digest",
+                "4" * 64,
+                "--reviewer",
+                "security-reviewer",
+                "--expires",
+                "2026-08-31",
+                "--control",
+                "zdr-reviewed",
+            ],
+        )
 
     assert result.exit_code == 0
     assert "recorded locally" in result.output
@@ -468,19 +471,20 @@ def test_prompt_protect_pseudonymizes_file_with_local_attestation(
     target = tmp_path / "prompt.txt"
     target.write_text(f"contact={raw}", encoding="utf-8")
 
-    result = runner.invoke(
-        app,
-        [
-            "prompt",
-            "protect",
-            "--provider",
-            profile.profile_id,
-            "--attestation",
-            attestation.attestation_id,
-            "--file",
-            str(target),
-        ],
-    )
+    with controlled_clock(date(2026, 8, 1)):
+        result = runner.invoke(
+            app,
+            [
+                "prompt",
+                "protect",
+                "--provider",
+                profile.profile_id,
+                "--attestation",
+                attestation.attestation_id,
+                "--file",
+                str(target),
+            ],
+        )
 
     assert result.exit_code == 1
     assert "<EMAIL_1>" in result.output

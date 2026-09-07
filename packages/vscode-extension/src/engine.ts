@@ -352,7 +352,7 @@ export function isCompatibleVersion(value: string): boolean {
   if (!match) {
     return false;
   }
-  return Number(match[1]) === 0 && Number(match[2]) === 8;
+  return Number(match[1]) === 0 && Number(match[2]) === 9;
 }
 
 function terminateOwnedProcess(child: ChildProcess, spawnEngine: SpawnEngine): void {

@@ -35,6 +35,29 @@ def generate_phase8(seed: int = 42) -> dict[str, list[EvaluationCase]]:
     return generated
 
 
+def generate_phase9(seed: int = 42) -> dict[str, list[EvaluationCase]]:
+    generated = generate_phase8(seed)
+    identifiers = [
+        ("management-signature-tamper", "management-verification"),
+        ("management-unknown-key", "management-verification"),
+        ("management-expired", "management-verification"),
+        ("management-rollback", "management-verification"),
+        ("management-extra-prompt", "management-prohibited"),
+        ("management-extra-response", "management-prohibited"),
+        ("management-extra-path", "management-prohibited"),
+        ("management-invalid-identifier", "management-prohibited"),
+        ("management-invalid-counts", "management-prohibited"),
+        ("management-safe-audit-one", "management-negative"),
+        ("management-safe-audit-two", "management-negative"),
+        ("management-safe-audit-three", "management-negative"),
+    ]
+    generated["management-synthetic"] = [
+        EvaluationCase(case_id=case_id, suite=suite, text="metadata-only")
+        for case_id, suite in identifiers
+    ]
+    return generated
+
+
 def write_jsonl(path: Path, cases: Iterable[EvaluationCase]) -> str:
     def safe_record(case: EvaluationCase) -> dict[str, object]:
         record = case.model_dump(mode="json")

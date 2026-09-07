@@ -4,9 +4,11 @@ import os
 import shutil
 import subprocess
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
+import yaml
 
 from codeshield.git import GitIntegrationError, GitRepository, HookManager, HookStatus
 from tests.git_helpers import git, initialize_repository, synthetic_api_key
@@ -55,6 +57,14 @@ def test_real_commit_hook_blocks_or_allows_review_exception(
     repository = initialize_repository(tmp_path / "repo")
     (repository / "policies").mkdir()
     shutil.copy("codeshield/policies/default.yaml", repository / "policies/default.yaml")
+    # The real hook runs in a child interpreter, so use a current, short-lived
+    # exception in this temporary fixture only; production expiry stays real.
+    policy_path = repository / "policies/default.yaml"
+    fixture_policy = yaml.safe_load(policy_path.read_text(encoding="utf-8"))
+    for exception in fixture_policy.get("exceptions", []):
+        if exception["exception_id"] == "review-test-api-key":
+            exception["expires_on"] = date.today() + timedelta(days=1)
+    policy_path.write_text(yaml.safe_dump(fixture_policy), encoding="utf-8")
     shutil.copy("../.codeshield.yaml", repository / ".codeshield.yaml")
     target = repository / relative_path
     target.parent.mkdir(parents=True, exist_ok=True)

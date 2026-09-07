@@ -1,2 +1,6 @@
 packages/shared/openapi.json text eol=lf
 packages/shared/src/generated.ts text eol=lf
+packages/shared/management-openapi.json text eol=lf
+packages/shared/src/management-generated.ts text eol=lf
+supabase/*.toml text eol=lf
+supabase/**/*.sql text eol=lf

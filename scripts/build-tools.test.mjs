@@ -34,7 +34,7 @@ function temporaryRepository() {
 }
 
 
-test("cleanBuildOutputs deletes only fixed dist directories", () => {
+test("cleanBuildOutputs deletes only fixed build directories", () => {
   const root = temporaryRepository();
   try {
     cleanBuildOutputs(root);

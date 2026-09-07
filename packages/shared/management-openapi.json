@@ -1,0 +1,863 @@
+{
+  "components": {
+    "schemas": {
+      "AuditBatchRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEventInput"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "events"
+        ],
+        "title": "AuditBatchRequest",
+        "type": "object"
+      },
+      "AuditBatchResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted": {
+            "minimum": 0,
+            "title": "Accepted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "accepted"
+        ],
+        "title": "AuditBatchResponse",
+        "type": "object"
+      },
+      "AuditEventInput": {
+        "additionalProperties": false,
+        "properties": {
+          "action_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "maxProperties": 16,
+            "title": "Action Counts",
+            "type": "object"
+          },
+          "category_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "maxProperties": 64,
+            "title": "Category Counts",
+            "type": "object"
+          },
+          "detector_version": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Detector Version",
+            "type": "string"
+          },
+          "endpoint_class": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Endpoint Class",
+            "type": "string"
+          },
+          "event_hmac": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Event Hmac",
+            "type": "string"
+          },
+          "highest_sensitivity": {
+            "pattern": "^(public|internal|confidential|restricted)$",
+            "title": "Highest Sensitivity",
+            "type": "string"
+          },
+          "latency_bucket": {
+            "pattern": "^(unknown|lt_50ms|lt_250ms|lt_750ms|lt_2s|gte_2s)$",
+            "title": "Latency Bucket",
+            "type": "string"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "status_bucket": {
+            "pattern": "^(allowed|warned|blocked|protected|failed)$",
+            "title": "Status Bucket",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_hmac",
+          "endpoint_class",
+          "category_counts",
+          "action_counts",
+          "highest_sensitivity",
+          "status_bucket",
+          "latency_bucket",
+          "detector_version",
+          "occurred_at"
+        ],
+        "title": "AuditEventInput",
+        "type": "object"
+      },
+      "DestinationVersionReference": {
+        "additionalProperties": false,
+        "properties": {
+          "destination_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Destination Id",
+            "type": "string"
+          },
+          "sensitivity_ceiling": {
+            "pattern": "^(public|internal|confidential|restricted)$",
+            "title": "Sensitivity Ceiling",
+            "type": "string"
+          },
+          "version": {
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_id",
+          "destination_id",
+          "version",
+          "sensitivity_ceiling"
+        ],
+        "title": "DestinationVersionReference",
+        "type": "object"
+      },
+      "DeviceRevocationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "device_uuid": {
+            "format": "uuid",
+            "title": "Device Uuid",
+            "type": "string"
+          },
+          "status": {
+            "default": "revoked",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_uuid"
+        ],
+        "title": "DeviceRevocationResponse",
+        "type": "object"
+      },
+      "DeviceTokenRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "device_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Device Id",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "organization_id": {
+            "format": "uuid",
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "owner_user_id": {
+            "format": "uuid",
+            "title": "Owner User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "organization_id",
+          "device_id",
+          "display_name",
+          "owner_user_id"
+        ],
+        "title": "DeviceTokenRequest",
+        "type": "object"
+      },
+      "DeviceTokenResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "device_id": {
+            "title": "Device Id",
+            "type": "string"
+          },
+          "device_uuid": {
+            "format": "uuid",
+            "title": "Device Uuid",
+            "type": "string"
+          },
+          "shown_once": {
+            "default": true,
+            "title": "Shown Once",
+            "type": "boolean"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_uuid",
+          "device_id",
+          "token"
+        ],
+        "title": "DeviceTokenResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "metadata_only": {
+            "default": true,
+            "title": "Metadata Only",
+            "type": "boolean"
+          },
+          "service": {
+            "default": "codeshield-management-api",
+            "title": "Service",
+            "type": "string"
+          },
+          "status": {
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "ManagedPolicyBundle": {
+        "additionalProperties": false,
+        "properties": {
+          "destinations": {
+            "items": {
+              "$ref": "#/components/schemas/DestinationVersionReference"
+            },
+            "maxItems": 128,
+            "title": "Destinations",
+            "type": "array"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "issued_at": {
+            "format": "date-time",
+            "title": "Issued At",
+            "type": "string"
+          },
+          "key_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Key Id",
+            "type": "string"
+          },
+          "minimum_compatible_engine": {
+            "title": "Minimum Compatible Engine",
+            "type": "string"
+          },
+          "organization_id": {
+            "format": "uuid",
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/PolicyDocumentPayload"
+          },
+          "policy_version_id": {
+            "format": "uuid",
+            "title": "Policy Version Id",
+            "type": "string"
+          },
+          "provider_profiles": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderProfileVersionReference"
+            },
+            "maxItems": 128,
+            "title": "Provider Profiles",
+            "type": "array"
+          },
+          "release_sequence": {
+            "exclusiveMinimum": 0,
+            "title": "Release Sequence",
+            "type": "integer"
+          },
+          "schema_version": {
+            "default": 1,
+            "maximum": 1,
+            "minimum": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "organization_id",
+          "release_sequence",
+          "policy_version_id",
+          "policy",
+          "provider_profiles",
+          "destinations",
+          "minimum_compatible_engine",
+          "issued_at",
+          "expires_at",
+          "key_id"
+        ],
+        "title": "ManagedPolicyBundle",
+        "type": "object"
+      },
+      "PolicyDocumentPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "mandatory": {
+            "title": "Mandatory",
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "policy_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Policy Id",
+            "type": "string"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyRulePayload"
+            },
+            "maxItems": 256,
+            "title": "Rules",
+            "type": "array"
+          },
+          "version": {
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "policy_id",
+          "version",
+          "name",
+          "mandatory",
+          "rules"
+        ],
+        "title": "PolicyDocumentPayload",
+        "type": "object"
+      },
+      "PolicyReleaseRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "destination_version_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 128,
+            "title": "Destination Version Ids",
+            "type": "array"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "minimum_compatible_engine": {
+            "pattern": "^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)$",
+            "title": "Minimum Compatible Engine",
+            "type": "string"
+          },
+          "organization_id": {
+            "format": "uuid",
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "policy_version_id": {
+            "format": "uuid",
+            "title": "Policy Version Id",
+            "type": "string"
+          },
+          "provider_profile_version_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 128,
+            "title": "Provider Profile Version Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "organization_id",
+          "policy_version_id",
+          "minimum_compatible_engine",
+          "expires_at"
+        ],
+        "title": "PolicyReleaseRequest",
+        "type": "object"
+      },
+      "PolicyReleaseResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "release_id": {
+            "format": "uuid",
+            "title": "Release Id",
+            "type": "string"
+          },
+          "signed_bundle": {
+            "$ref": "#/components/schemas/SignedPolicyBundle"
+          }
+        },
+        "required": [
+          "release_id",
+          "signed_bundle"
+        ],
+        "title": "PolicyReleaseResponse",
+        "type": "object"
+      },
+      "PolicyRulePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "pattern": "^(allow|warn|mask|pseudonymize|block)$",
+            "title": "Action",
+            "type": "string"
+          },
+          "category": {
+            "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+            "title": "Category",
+            "type": "string"
+          },
+          "destination_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Destination Id",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "mandatory": {
+            "title": "Mandatory",
+            "type": "boolean"
+          },
+          "remediation_code": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Remediation Code",
+            "type": "string"
+          },
+          "rule_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "sensitivity": {
+            "pattern": "^(public|internal|confidential|restricted)$",
+            "title": "Sensitivity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_id",
+          "category",
+          "action",
+          "destination_id",
+          "sensitivity",
+          "mandatory",
+          "remediation_code"
+        ],
+        "title": "PolicyRulePayload",
+        "type": "object"
+      },
+      "ProviderProfileVersionReference": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Evidence Digest",
+            "type": "string"
+          },
+          "profile_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Profile Id",
+            "type": "string"
+          },
+          "version": {
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_id",
+          "profile_id",
+          "version",
+          "evidence_digest"
+        ],
+        "title": "ProviderProfileVersionReference",
+        "type": "object"
+      },
+      "SignedPolicyBundle": {
+        "additionalProperties": false,
+        "properties": {
+          "bundle": {
+            "$ref": "#/components/schemas/ManagedPolicyBundle"
+          },
+          "signature": {
+            "maxLength": 86,
+            "minLength": 86,
+            "title": "Signature",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bundle",
+          "signature"
+        ],
+        "title": "SignedPolicyBundle",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VersionResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "title": "VersionResponse",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Organizational metadata, device enrollment, and signed policy delivery. Content scanning remains local.",
+    "title": "CodeShield Metadata Management API",
+    "version": "0.9.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/v1/audit-events/batch": {
+      "post": {
+        "operationId": "upload_audit_batch_v1_audit_events_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuditBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditBatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Audit Batch"
+      }
+    },
+    "/v1/device-tokens": {
+      "post": {
+        "operationId": "issue_device_token_v1_device_tokens_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Issue Device Token"
+      }
+    },
+    "/v1/devices/{device_uuid}/revoke": {
+      "post": {
+        "operationId": "revoke_device_v1_devices__device_uuid__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Device Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceRevocationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Device"
+      }
+    },
+    "/v1/policy-bundles/latest": {
+      "get": {
+        "operationId": "latest_policy_bundle_v1_policy_bundles_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyReleaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Latest Policy Bundle"
+      }
+    },
+    "/v1/policy-bundles/releases": {
+      "post": {
+        "operationId": "release_policy_bundle_v1_policy_bundles_releases_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyReleaseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyReleaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Release Policy Bundle"
+      }
+    },
+    "/version": {
+      "get": {
+        "operationId": "version_version_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Version"
+      }
+    }
+  }
+}

@@ -6,6 +6,7 @@ from datetime import date
 from pathlib import Path
 
 from codeshield.llm.audit import AuditStore
+from codeshield.management.policy import effective_policy_engine
 from codeshield.llm.classification import PERSONAL_CATEGORIES, SegmentClassifier
 from codeshield.models.config import load_repository_config
 from codeshield.models.enums import (
@@ -48,7 +49,7 @@ class LlmPreflightService:
         self.attestations = attestations or AttestationStore()
         self.audit = audit
         self.today = today
-        self.policy_engine = policy_engine or PolicyEngine()
+        self.policy_engine = effective_policy_engine(policy_engine or PolicyEngine())
 
     def assess(self, request: LlmPreflightRequest) -> LlmAssessmentResult:
         assessments = [self.classifier.classify(segment) for segment in request.segments]

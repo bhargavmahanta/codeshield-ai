@@ -137,9 +137,11 @@ class SegmentClassifier:
         *,
         public_code_paths: list[str] | None = None,
         repository_root: Path | None = None,
+        public_conversation: bool = False,
     ) -> None:
         self.scanner = scanner or CodeShieldScanner()
         self.public_code_paths = public_code_paths or []
+        self.public_conversation = public_conversation
         self.repository_root = repository_root.resolve() if repository_root else None
 
     def classify(self, segment: ContentSegment) -> SegmentAssessment:
@@ -192,6 +194,9 @@ class SegmentClassifier:
         self, segment: ContentSegment, categories: set[DataCategory]
     ) -> SensitivityLevel:
         level = SensitivityLevel.INTERNAL
+        # Application-owned reviewed context, never a request-body override.
+        if self.public_conversation and segment.kind is SegmentKind.USER:
+            level = SensitivityLevel.PUBLIC
         if segment.kind is SegmentKind.SOURCE_CODE and self._is_public_source(segment.path):
             level = SensitivityLevel.PUBLIC
         for category in categories:

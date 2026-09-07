@@ -92,11 +92,11 @@ describe("shell-free engine runner", () => {
     );
   });
 
-  it("requires the Phase 8 engine version range", () => {
-    expect(isCompatibleVersion("0.8.0")).toBe(true);
-    expect(isCompatibleVersion("0.8.9+local")).toBe(true);
-    expect(isCompatibleVersion("0.7.0")).toBe(false);
-    expect(isCompatibleVersion("0.9.0")).toBe(false);
+  it("requires the Phase 9 engine version range", () => {
+    expect(isCompatibleVersion("0.9.0")).toBe(true);
+    expect(isCompatibleVersion("0.9.9+local")).toBe(true);
+    expect(isCompatibleVersion("0.8.0")).toBe(false);
+    expect(isCompatibleVersion("0.10.0")).toBe(false);
     expect(isCompatibleVersion("not-a-version")).toBe(false);
   });
 

@@ -57,6 +57,7 @@ from codeshield.version import __version__
 from codeshield.evaluation import EvaluationError, compare_reports, prepare_suite, run_evaluation
 from codeshield.sarif import SarifError, render_sarif, write_output
 from codeshield.proxy import ProxyConfigError, create_proxy_app, load_proxy_config
+from codeshield.management.service import ManagementService
 
 
 class OutputFormat(StrEnum):
@@ -75,16 +76,20 @@ app = typer.Typer(
 )
 policy_app = typer.Typer(help="Validate and inspect destination policy files.")
 provider_app = typer.Typer(help="Inspect provider evidence and local attestations.")
-prompt_app = typer.Typer(help="Assess or protect prompts without sending them.")
+prompt_app = typer.Typer(help="Assess/protect locally, or explicitly run an inspected OpenCode prompt.")
 detector_app = typer.Typer(help="Inspect local detector profile availability.")
 evaluate_app = typer.Typer(help="Prepare and run reproducible local evaluations.")
 proxy_app = typer.Typer(help="Validate or serve the authenticated local LLM proxy.")
+management_app = typer.Typer(
+    help="Explicitly pull signed policies or upload safe audit aggregates."
+)
 app.add_typer(policy_app, name="policy")
 app.add_typer(provider_app, name="provider")
 app.add_typer(prompt_app, name="prompt")
 app.add_typer(detector_app, name="detector")
 app.add_typer(evaluate_app, name="evaluate")
 app.add_typer(proxy_app, name="proxy")
+app.add_typer(management_app, name="management")
 
 
 @app.command()
@@ -870,6 +875,76 @@ def show_detector_status(
         _configuration_error(exc)
 
 
+@prompt_app.command("doctor")
+def prompt_doctor(via: str = typer.Option("opencode", "--via")) -> None:
+    """Check OpenCode metadata only; never inspect authentication files."""
+    from codeshield.opencode.errors import OpenCodeError
+    try:
+        if via != "opencode":
+            raise OpenCodeError("CS_OPENCODE_INVALID_INPUT")
+        from codeshield.opencode.runner import doctor
+        doctor()
+        typer.echo("OpenCode compatibility: VERIFIED (1.18.26)")
+        typer.echo("Authentication: not inspected")
+    except Exception:
+        typer.echo("CS_OPENCODE_CONFIGURATION: compatibility check failed", err=True)
+        raise typer.Exit(3) from None
+
+
+@prompt_app.command("run")
+def prompt_run(
+    via: str = typer.Option("opencode", "--via"),
+    model: str = typer.Option(..., "--model"),
+    stdin: bool = typer.Option(False, "--stdin"),
+    file: Path | None = typer.Option(None, "--file"),
+    demo: str | None = typer.Option(None, "--demo"),
+    source_path: str | None = typer.Option(None, "--source-path"),
+    explain: bool = typer.Option(False, "--explain"),
+) -> None:
+    """Inspect locally before permitting one isolated OpenCode execution."""
+    from codeshield.opencode.service import OpenCodeCoordinator, PromptInput, demo_input
+    from codeshield.opencode.errors import OpenCodeError
+    try:
+        if via != "opencode" or sum((stdin, file is not None, demo is not None)) != 1:
+            raise OpenCodeError("CS_OPENCODE_INVALID_INPUT")
+        if demo is not None:
+            if source_path is not None:
+                raise OpenCodeError("CS_OPENCODE_INVALID_INPUT")
+            source = demo_input(demo)
+        elif stdin:
+            source = PromptInput(_read_bounded_stdin(MAX_STDIN_BYTES), source_path)
+        else:
+            if file is None or file.name.casefold() == "auth.json" or file.is_symlink() or not file.is_file():
+                raise OpenCodeError("CS_OPENCODE_INVALID_INPUT")
+            with file.open("rb") as stream:
+                raw = stream.read(MAX_STDIN_BYTES + 1)
+            if len(raw) > MAX_STDIN_BYTES:
+                raise OpenCodeError("CS_OPENCODE_INVALID_INPUT")
+            source = PromptInput(raw.decode("utf-8", errors="strict"), source_path)
+        result = OpenCodeCoordinator().execute(source, model)
+    except OpenCodeError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(3) from None
+    except Exception:
+        # Never allow validation, detector, or process exceptions to print content.
+        typer.echo("CS_OPENCODE_FAILED", err=True)
+        raise typer.Exit(3) from None
+    assessment = result.assessment
+    typer.echo(f"Decision: {assessment.action.value.upper()}")
+    typer.echo(f"Transmission permitted: {'YES' if assessment.safe_to_send else 'NO'}")
+    typer.echo(f"OpenCode: {'INVOKED ONCE' if result.invocation_count else 'NOT INVOKED'}")
+    if explain:
+        from codeshield.opencode.presentation import explain_lines
+        for line in explain_lines(result):
+            typer.echo(line)
+    if result.invocation_count:
+        typer.echo(f"Inbound inspection: {'PASSED' if result.inbound_passed else 'BLOCKED'}")
+    if result.inbound_passed:
+        from codeshield.opencode.presentation import escape_terminal
+        typer.echo(escape_terminal(result.response))
+    raise typer.Exit(result.exit_code)
+
+
 @prompt_app.command("assess")
 def prompt_assess(
     provider: Annotated[str, typer.Option("--provider")],
@@ -1028,6 +1103,146 @@ def proxy_serve(
         port=config.port,
         access_log=False,
         log_level="warning",
+    )
+
+
+@management_app.command("validate-config")
+def management_validate_config(
+    config_path: Annotated[
+        Path,
+        typer.Argument(help="Absolute machine-local YAML file."),
+    ],
+) -> None:
+    """Validate a credential-free management client configuration."""
+
+    try:
+        config = ManagementService(config_path=config_path).validate_config()
+    except (OSError, ValueError) as exc:
+        typer.echo(
+            json.dumps(
+                {
+                    "valid": False,
+                    "code": getattr(
+                        exc,
+                        "code",
+                        "CS_MANAGEMENT_CONFIG_INVALID",
+                    ),
+                }
+            ),
+            err=True,
+        )
+        raise typer.Exit(3) from exc
+    typer.echo(
+        json.dumps(
+            {
+                "valid": True,
+                "schema_version": config.schema_version,
+                "organization_id": str(config.organization_id),
+                "device_id": str(config.device_id),
+                "signing_key_count": len(config.signing_public_keys),
+                "offline_validity_days": config.offline_validity_days,
+            },
+            indent=2,
+        )
+    )
+
+
+@management_app.command("status")
+def management_status() -> None:
+    """Inspect the active managed policy without network access."""
+
+    status = ManagementService().status()
+    typer.echo(json.dumps(status.model_dump(mode="json"), indent=2))
+    if status.configured and status.policy_status != "valid":
+        raise typer.Exit(3)
+
+
+@management_app.command("pull-policy")
+def management_pull_policy() -> None:
+    """Explicitly pull, verify, and atomically activate the latest policy."""
+
+    try:
+        status = ManagementService().pull_policy()
+    except (OSError, ValueError) as exc:
+        typer.echo(
+            json.dumps(
+                {
+                    "activated": False,
+                    "code": getattr(
+                        exc,
+                        "code",
+                        "CS_MANAGEMENT_PULL_FAILED",
+                    ),
+                }
+            ),
+            err=True,
+        )
+        raise typer.Exit(3) from exc
+    typer.echo(
+        json.dumps(
+            {
+                "activated": True,
+                "release_sequence": status.release_sequence,
+                "key_id": status.key_id,
+                "expires_at": status.expires_at.isoformat()
+                if status.expires_at
+                else None,
+            },
+            indent=2,
+        )
+    )
+
+
+@management_app.command("upload-audit")
+def management_upload_audit(
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Count the safe projection without network access."),
+    ] = False,
+    confirm: Annotated[
+        bool,
+        typer.Option("--confirm", help="Explicitly upload the safe aggregate projection."),
+    ] = False,
+) -> None:
+    """Dry-run or explicitly upload metadata-only local audit aggregates."""
+
+    if dry_run == confirm:
+        typer.echo(
+            json.dumps(
+                {
+                    "uploaded": False,
+                    "code": "CS_MANAGEMENT_CONFIRMATION_REQUIRED",
+                }
+            ),
+            err=True,
+        )
+        raise typer.Exit(3)
+    try:
+        projected, accepted = ManagementService().upload_audit(confirm=confirm)
+    except (OSError, ValueError) as exc:
+        typer.echo(
+            json.dumps(
+                {
+                    "uploaded": False,
+                    "code": getattr(
+                        exc,
+                        "code",
+                        "CS_MANAGEMENT_AUDIT_FAILED",
+                    ),
+                }
+            ),
+            err=True,
+        )
+        raise typer.Exit(3) from exc
+    typer.echo(
+        json.dumps(
+            {
+                "dry_run": dry_run,
+                "projected": projected,
+                "accepted": accepted,
+            },
+            indent=2,
+        )
     )
 
 

@@ -97,6 +97,33 @@ def test_phase8_proxy_suite_is_versioned_safe_and_gated(tmp_path: Path) -> None:
         report["metrics"]["proxy"]["negative_case_false_positive_rate"]
         <= 0.02
     )
+
+
+def test_phase9_management_suite_is_versioned_safe_and_gated(
+    tmp_path: Path,
+) -> None:
+    report_path = tmp_path / "phase9.json"
+    report = run_evaluation(
+        profile=DetectorProfile.CORE,
+        output=report_path,
+        root=tmp_path / "datasets",
+        suite="phase9",
+    )
+    assert report["suite"] == "phase9"
+    metrics = report["metrics"]["management"]
+    assert metrics["verification_rejection_recall"] == 1.0
+    assert metrics["prohibited_ingestion_rejection_recall"] == 1.0
+    assert metrics["negative_case_false_positive_rate"] <= 0.02
+    assert report["metrics"]["latency"]["100000"]["warm_p95_ms"] <= 250
+    serialized = report_path.read_text(encoding="utf-8").lower()
+    for field in (
+        '"prompt"',
+        '"response"',
+        '"raw_path"',
+        '"credential"',
+        '"pseudonym_mapping"',
+    ):
+        assert field not in serialized
     serialized = report_path.read_text(encoding="utf-8")
     assert "sk_" + "live_51" not in serialized
     assert "masked_preview" not in serialized
