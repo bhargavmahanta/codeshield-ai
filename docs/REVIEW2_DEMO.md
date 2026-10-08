@@ -49,10 +49,19 @@ artifact directory stalled on disk I/O; the native cache installation finished.
 
 ```bash
 codeshield prompt doctor --via opencode
-codeshield prompt run --via opencode --model openai/gpt-5.4-mini --demo safe --explain
-codeshield prompt run --via opencode --model openai/gpt-5.4-mini --demo test-credential --explain
-codeshield prompt run --via opencode --model openai/gpt-5.4-mini --demo production-secret --explain
+codeshield prompt run --via opencode --model openai/gpt-5.5 --demo safe --explain
+codeshield prompt run --via opencode --model openai/gpt-5.5 --demo test-credential --explain
+codeshield prompt run --via opencode --model openai/gpt-5.5 --demo production-secret --explain
 ```
+
+The model was changed from `openai/gpt-5.4-mini` on 2026-10-08. OpenAI
+retired the `gpt-5.3`/`gpt-5.4` families for ChatGPT subscription accounts, so
+that route now rejects them with `400` and `"not supported when using Codex
+with a ChatGPT account"`. CodeShield surfaces this as `CS_OPENCODE_FAILED`
+(exit `3`) because it never echoes subprocess output. Confirm a model is
+entitled before rehearsing; CodeShield will not substitute one automatically.
+Confirming models never changes a security decision: a blocked preset blocks
+identically regardless of which entitled model is named.
 
 Inputs can instead use exactly one of `--stdin` or `--file FILE`, with an
 optional sanitized repository-relative `--source-path PATH`. Input is capped
