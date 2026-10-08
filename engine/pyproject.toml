@@ -47,6 +47,6 @@ include = ["codeshield*"]
 "codeshield.evaluation" = ["*.yaml"]
 
 [tool.pytest.ini_options]
-addopts = "-q --basetemp=.pytest-tmp -p no:cacheprovider"
+addopts = "-q -p no:cacheprovider"
 testpaths = ["tests"]
 pythonpath = ["."]
