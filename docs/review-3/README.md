@@ -6,9 +6,11 @@ institution's Project Review template.
 ## Deliverables
 
 - `CodeShield_AI_Review_3.docx`: editable report (project snapshot, team and
-  project journey, chapters 1–11, references, source-code appendix). Export a
-  PDF from Word after the identity fields are completed; the PDF is generated
-  output and is not committed.
+  project journey, chapters 1–11, references, source-code appendix).
+- `CodeShield_AI_Review_3.pdf`: PDF export of the report. It still shows the
+  identity placeholders; export it again from Word after completing them.
+- `Project_Review_Template.docx`: the institution's blank Project Review
+  template the report was built on.
 
 ## Evidence used
 
