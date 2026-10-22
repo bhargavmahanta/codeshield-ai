@@ -24,6 +24,7 @@
 - [Review 2 execution record](review2-implementation-progress.md)
 - [Review 2 baseline and regex results](review2-baseline-results.md)
 - [Review 2 OpenCode runner results](review2-runner-results.md)
+- [Review 3 report package](review-3/README.md)
 
 Repository-aware coding agents should read the root `AGENTS.md` before making
 changes.
